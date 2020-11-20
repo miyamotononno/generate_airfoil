@@ -30,16 +30,6 @@ coord_shape = (opt.channels, opt.coord_size)
 
 cuda = True if torch.cuda.is_available() else False
 
-def standardization(data):
-    """data type must be a tensor of pytorch"""
-    means = data.mean(dim=0, keepdim=True)
-    stds = data.std(dim=0, keepdim=True)
-    zero_divison = torch.isclose(stds, Variable(FloatTensor(stds.shape[0], 1).fill_(0.0)))
-    if True in zero_divison:
-        return data
-    else:
-        return (data-means) / stds
-
 class Generator(nn.Module):
     def __init__(self):
         super(Generator, self).__init__()
@@ -62,8 +52,7 @@ class Generator(nn.Module):
     def forward(self, noise, labels):
         # Concatenate label embedding and image to produce input
         gen_input = torch.cat((labels, noise), -1)
-        standardized_data = standardization(gen_input)
-        coords = self.model(standardized_data)
+        coords = self.model(gen_input)
         return coords
 
 class Discriminator(nn.Module):
@@ -102,7 +91,10 @@ if cuda:
 
 # Configure data loader
 perfs = np.load("./dataset/perfs.npy")
-coords = np.load("./dataset/coords.npy")
+npz = np.load("./dataset/standardized_coords.npz")
+coords = npz[npz.files[0]]
+mean = npz[npz.files[1]]
+std = npz[npz.files[2]]
 
 dataset = torch.utils.data.TensorDataset(torch.tensor(coords), torch.tensor(perfs))
 dataloader = torch.utils.data.DataLoader(
@@ -130,7 +122,7 @@ def sample_image(epoch=None, data_num=6):
         fig, ax = plt.subplots(2,3, sharex=True, sharey=True)
         for i in range(data_num):
             label = labels[i][0]
-            coord = gen_coords[i]
+            coord = gen_coords[i]*std+mean
             xs, ys = coord.reshape(2, -1)
             ax[i%2, i//2].plot(xs, ys)
             cl = round(label.item(), 3)
@@ -138,7 +130,7 @@ def sample_image(epoch=None, data_num=6):
             ax[i%2, i//2].set_title(title)
         fig.savefig("./generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
     else:
-        np.savez("result/final", labels, gen_coords)
+        np.savez("result/final", labels, gen_coords*std+mean)
 
 
 # ----------
