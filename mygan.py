@@ -1,5 +1,4 @@
 import argparse
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -9,17 +8,17 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import statistics
 
-os.makedirs("images", exist_ok=True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
-parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
+parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
-parser.add_argument("--latent_dim", type=int, default=50, help="dimensionality of the latent space")
+parser.add_argument("--latent_dim", type=int, default=63, help="dimensionality of the latent space")
 parser.add_argument("--n_classes", type=int, default=1, help="number of classes for dataset")
 parser.add_argument("--coord_size", type=int, default=496, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
@@ -37,11 +36,12 @@ class Generator(nn.Module):
             layers = [nn.Linear(in_feat, out_feat)]
             if normalize:
                 layers.append(nn.BatchNorm1d(out_feat, 0.8))
+                layers.append(nn.Dropout(0.2))
             layers.append(nn.LeakyReLU(0.2, inplace=True))
             return layers
 
         self.model = nn.Sequential(
-            *block(opt.latent_dim + opt.n_classes, 64, normalize=False), # 50 + 1
+            *block(opt.latent_dim + opt.n_classes, 64, normalize=False),
             *block(64, 128),
             *block(128, 256),
             *block(256, 512),
@@ -61,6 +61,7 @@ class Discriminator(nn.Module):
 
         self.model = nn.Sequential(
             nn.Linear(opt.n_classes + int(np.prod(coord_shape)), 256), # 1 + 496
+            nn.Dropout(0.2),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Linear(256, 256),
             nn.Dropout(0.4),
@@ -68,7 +69,7 @@ class Discriminator(nn.Module):
             nn.Linear(256, 256),
             nn.Dropout(0.4),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(256, 1),
+            nn.Linear(256, 1)
         )
 
     def forward(self, coords, labels):
@@ -90,11 +91,14 @@ if cuda:
     adversarial_loss.cuda()
 
 # Configure data loader
-perfs = np.load("./dataset/perfs.npy")
-npz = np.load("./dataset/standardized_coords.npz")
-coords = npz[npz.files[0]]
-mean = npz[npz.files[1]]
-std = npz[npz.files[2]]
+perfs_npz = np.load("./dataset/yonekura_standardized_perfs.npz")
+coords_npz = np.load("./dataset/yonekura_standardized_coords.npz")
+coords = coords_npz[coords_npz.files[0]]
+coord_mean = coords_npz[coords_npz.files[1]]
+coord_std = coords_npz[coords_npz.files[2]]
+perfs = perfs_npz[perfs_npz.files[0]]
+perf_mean = perfs_npz[perfs_npz.files[1]]
+perf_std = perfs_npz[perfs_npz.files[2]]
 
 dataset = torch.utils.data.TensorDataset(torch.tensor(coords), torch.tensor(perfs))
 dataloader = torch.utils.data.DataLoader(
@@ -114,29 +118,38 @@ def sample_image(epoch=None, data_num=6):
     # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim))))
     # Get labels ranging from 0 to n_classes for n rows
-    labels = 1.5*np.random.random_sample(data_num)
+    labels = np.random.normal(loc=perf_mean, scale=perf_std, size=data_num)
     labels = Variable(torch.reshape(FloatTensor([labels]), (data_num, opt.n_classes)))
     gen_coords = generator(z, labels).detach().numpy()
     if epoch is not None:
-        np.savez("result/epoch_{0}".format(str(epoch).zfill(3)), labels, gen_coords)
         fig, ax = plt.subplots(2,3, sharex=True, sharey=True)
         for i in range(data_num):
             label = labels[i][0]
-            coord = gen_coords[i]*std+mean
+            coord = gen_coords[i]*coord_std+coord_mean
             xs, ys = coord.reshape(2, -1)
             ax[i%2, i//2].plot(xs, ys)
             cl = round(label.item(), 3)
             title = 'CL={0}'.format(str(cl))
             ax[i%2, i//2].set_title(title)
-        fig.savefig("./generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
+        fig.savefig("generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
     else:
-        np.savez("result/final", labels, gen_coords*std+mean)
+        np.savez("result/final", labels, gen_coords*coord_std+coord_mean)
 
+
+def save_loss(G_losses, D_losses):
+    fig = plt.figure(figsize=(10,5))
+    plt.title("Generator and Discriminator Loss During Training")
+    plt.plot(G_losses,label="G")
+    plt.plot(D_losses,label="D")
+    plt.xlabel("iterations")
+    plt.ylabel("Loss")
+    plt.legend()
+    fig.savefig("./result/loss.png")
 
 # ----------
 #  Training
 # ----------
-
+D_losses, G_losses = [], []
 for epoch in range(opt.n_epochs):
     for i, (coords, labels) in enumerate(dataloader):
         batch_size = coords.shape[0]
@@ -158,12 +171,13 @@ for epoch in range(opt.n_epochs):
         # Sample noise and labels as generator input
         z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, opt.latent_dim))))
 
-        gen_labels = Variable(FloatTensor(1.5*np.random.random_sample((batch_size, opt.n_classes))))
+        gen_labels = Variable(FloatTensor(np.random.normal(loc=perf_mean, scale=perf_std, size=(batch_size, opt.n_classes))))
         # Generate a batch of images
         gen_imgs = generator(z, gen_labels)
         # Loss measures generator's ability to fool the discriminator
         validity = discriminator(gen_imgs, gen_labels)
-        g_loss = adversarial_loss(validity, valid)
+        # g_loss = adversarial_loss(validity, valid)
+        g_loss = - adversarial_loss(validity, fake)
 
         g_loss.backward()
         optimizer_G.step()
@@ -192,9 +206,12 @@ for epoch in range(opt.n_epochs):
                 "[Epoch %d/%d] [D loss: %f] [G loss: %f]"
                 % (epoch+1, opt.n_epochs, d_loss.item(), g_loss.item())
             )
-
+        if i%10==0:
+            D_losses.append(d_loss.item())
+            G_losses.append(g_loss.item())
     if (epoch+1)%20==0:
         sample_image(epoch=epoch+1)
-
+        # sample_image(data_num=100)
 # final
 sample_image(data_num=100)
+save_loss(G_losses, D_losses)
