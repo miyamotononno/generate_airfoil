@@ -36,7 +36,6 @@ class Generator(nn.Module):
             layers = [nn.Linear(in_feat, out_feat)]
             if normalize:
                 layers.append(nn.BatchNorm1d(out_feat, 0.8))
-                layers.append(nn.Dropout(0.2))
             layers.append(nn.LeakyReLU(0.2, inplace=True))
             return layers
 
@@ -209,6 +208,7 @@ for epoch in range(opt.n_epochs):
         if i%10==0:
             D_losses.append(d_loss.item())
             G_losses.append(g_loss.item())
+
     if (epoch+1)%20==0:
         sample_image(epoch=epoch+1)
         # sample_image(data_num=100)
