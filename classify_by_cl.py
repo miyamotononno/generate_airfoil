@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from remove_cl import removed_cl
 # perf = np.load('./data/coefficients.npy')
 # coord = np.load('./data/naca4.npy')
 yonekura_coord_path = './dataset/yonekura_coords.npy'
@@ -33,12 +34,11 @@ def filter_images_by_cl(perf):
 
     show_image(file, coord)
 
-filter_images_by_cl('0.19')
+# filter_images_by_cl('0.99')
 
-# for i in range(len(perfs)):
-#   cl = str(perfs[i])
-#   title = 'cl_{0}'.format(cl[0:4])
-#   if not os.path.isdir("images/{0}".format(title)):
-#     os.makedirs("images/{0}".format(title), exist_ok=True)
+for cl, co in zip(perfs, coords):
+  if cl in removed_cl:
+    show_image(cl, co)
+  
   
 #   np.save("images/{0}/{1}".format(title, perfs[i]), coords[i])

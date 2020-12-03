@@ -18,7 +18,7 @@ parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rat
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
-parser.add_argument("--latent_dim", type=int, default=63, help="dimensionality of the latent space")
+parser.add_argument("--latent_dim", type=int, default=7, help="dimensionality of the latent space")
 parser.add_argument("--n_classes", type=int, default=1, help="number of classes for dataset")
 parser.add_argument("--coord_size", type=int, default=496, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
@@ -68,7 +68,8 @@ class Discriminator(nn.Module):
             nn.Linear(256, 256),
             nn.Dropout(0.4),
             nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(256, 1)
+            nn.Linear(256, 1),
+            nn.Sigmoid()
         )
 
     def forward(self, coords, labels):
