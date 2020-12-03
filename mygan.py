@@ -12,13 +12,13 @@ import statistics
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=400, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
-parser.add_argument("--latent_dim", type=int, default=7, help="dimensionality of the latent space")
+parser.add_argument("--latent_dim", type=int, default=15, help="dimensionality of the latent space")
 parser.add_argument("--n_classes", type=int, default=1, help="number of classes for dataset")
 parser.add_argument("--coord_size", type=int, default=496, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
@@ -40,11 +40,12 @@ class Generator(nn.Module):
             return layers
 
         self.model = nn.Sequential(
-            *block(opt.latent_dim + opt.n_classes, 64, normalize=False),
+            *block(opt.latent_dim + opt.n_classes, 16, normalize=False),
+            *block(16, 32),
+            *block(32, 64),
             *block(64, 128),
             *block(128, 256),
-            *block(256, 512),
-            nn.Linear(512, int(np.prod(coord_shape))),
+            nn.Linear(256, int(np.prod(coord_shape))),
             nn.Tanh()
         )
 
@@ -58,16 +59,18 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
 
+        def block(in_feat, out_feat, dropout=True):
+            layers = [nn.Linear(in_feat, out_feat)]
+            if dropout:
+                layers.append(nn.Dropout(0.4))
+            layers.append(nn.LeakyReLU(0.2, inplace=True))
+            return layers
+
         self.model = nn.Sequential(
-            nn.Linear(opt.n_classes + int(np.prod(coord_shape)), 256), # 1 + 496
-            nn.Dropout(0.2),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(256, 256),
-            nn.Dropout(0.4),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(256, 256),
-            nn.Dropout(0.4),
-            nn.LeakyReLU(0.2, inplace=True),
+            *block(opt.n_classes + int(np.prod(coord_shape)), 256, dropout=False),
+            *block(256, 256),
+            *block(256, 256),
+            *block(256, 256),
             nn.Linear(256, 1),
             nn.Sigmoid()
         )
@@ -79,7 +82,7 @@ class Discriminator(nn.Module):
         return validity
 
 # Loss functions
-adversarial_loss = torch.nn.MSELoss()
+adversarial_loss = torch.nn.BCELoss()
 
 # Initialize generator and discriminator
 generator = Generator()
