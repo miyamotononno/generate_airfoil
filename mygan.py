@@ -12,13 +12,13 @@ import statistics
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=400, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=600, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
-parser.add_argument("--latent_dim", type=int, default=15, help="dimensionality of the latent space")
+parser.add_argument("--latent_dim", type=int, default=7, help="dimensionality of the latent space")
 parser.add_argument("--n_classes", type=int, default=1, help="number of classes for dataset")
 parser.add_argument("--coord_size", type=int, default=496, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
@@ -36,15 +36,17 @@ class Generator(nn.Module):
             layers = [nn.Linear(in_feat, out_feat)]
             if normalize:
                 layers.append(nn.BatchNorm1d(out_feat, 0.8))
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
+            layers.append(nn.ReLU(inplace=True))
             return layers
 
         self.model = nn.Sequential(
-            *block(opt.latent_dim + opt.n_classes, 16, normalize=False),
+            *block(opt.latent_dim + opt.n_classes, 8, normalize=False),
+            *block(8, 16),
             *block(16, 32),
             *block(32, 64),
             *block(64, 128),
             *block(128, 256),
+            # *block(256, int(np.prod(coord_shape)), normalize=False)
             nn.Linear(256, int(np.prod(coord_shape))),
             nn.Tanh()
         )
@@ -153,6 +155,7 @@ def save_loss(G_losses, D_losses):
 #  Training
 # ----------
 D_losses, G_losses = [], []
+early_stopping = False
 for epoch in range(opt.n_epochs):
     for i, (coords, labels) in enumerate(dataloader):
         batch_size = coords.shape[0]
@@ -204,6 +207,10 @@ for epoch in range(opt.n_epochs):
 
         d_loss.backward()
         optimizer_D.step()
+        if epoch>40 and (np.isclose(g_loss.item(), 0) or np.isclose(d_loss.item(), 0)):
+            early_stopping = True
+            break
+
         if i==0:
             print(
                 "[Epoch %d/%d] [D loss: %f] [G loss: %f]"
@@ -213,9 +220,12 @@ for epoch in range(opt.n_epochs):
             D_losses.append(d_loss.item())
             G_losses.append(g_loss.item())
 
+    if early_stopping:
+        break
     if (epoch+1)%20==0:
         sample_image(epoch=epoch+1)
-        # sample_image(data_num=100)
-# final
-sample_image(data_num=100)
+    if epoch%1==0:
+        sample_image(data_num=100)
+
+# sample_image(data_num=100)
 save_loss(G_losses, D_losses)
