@@ -1,5 +1,5 @@
 import numpy as np
-path = "naca4"
+path = "data/naca4"
 
 contents = np.empty((10000, 2, 248))
 for i in range(10):
@@ -22,5 +22,5 @@ for i in range(10):
     break
   break
 
-# np.save("./naca4.npy", contents)
+np.save("./naca4.npy", contents)
 

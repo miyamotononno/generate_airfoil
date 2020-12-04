@@ -18,7 +18,7 @@ parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rat
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
-parser.add_argument("--latent_dim", type=int, default=7, help="dimensionality of the latent space")
+parser.add_argument("--latent_dim", type=int, default=10, help="dimensionality of the latent space")
 parser.add_argument("--n_classes", type=int, default=1, help="number of classes for dataset")
 parser.add_argument("--coord_size", type=int, default=496, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
@@ -36,18 +36,15 @@ class Generator(nn.Module):
             layers = [nn.Linear(in_feat, out_feat)]
             if normalize:
                 layers.append(nn.BatchNorm1d(out_feat, 0.8))
-            layers.append(nn.ReLU(inplace=True))
+            layers.append(nn.LeakyReLU(0.2, inplace=True))
             return layers
 
         self.model = nn.Sequential(
-            *block(opt.latent_dim + opt.n_classes, 8, normalize=False),
-            *block(8, 16),
-            *block(16, 32),
-            *block(32, 64),
+            *block(opt.latent_dim + opt.n_classes, 64, normalize=False),
             *block(64, 128),
             *block(128, 256),
-            # *block(256, int(np.prod(coord_shape)), normalize=False)
-            nn.Linear(256, int(np.prod(coord_shape))),
+            *block(256, 512),
+            nn.Linear(512, int(np.prod(coord_shape))),
             nn.Tanh()
         )
 
@@ -69,11 +66,10 @@ class Discriminator(nn.Module):
             return layers
 
         self.model = nn.Sequential(
-            *block(opt.n_classes + int(np.prod(coord_shape)), 256, dropout=False),
-            *block(256, 256),
-            *block(256, 256),
-            *block(256, 256),
-            nn.Linear(256, 1),
+            *block(opt.n_classes + int(np.prod(coord_shape)), 512, dropout=False),
+            *block(512, 256),
+            *block(256, 128),
+            nn.Linear(128, 1),
             nn.Sigmoid()
         )
 
@@ -96,8 +92,8 @@ if cuda:
     adversarial_loss.cuda()
 
 # Configure data loader
-perfs_npz = np.load("./dataset/yonekura_standardized_perfs.npz")
-coords_npz = np.load("./dataset/yonekura_standardized_coords.npz")
+perfs_npz = np.load("./dataset/standardized_perfs.npz")
+coords_npz = np.load("./dataset/standardized_coords.npz")
 coords = coords_npz[coords_npz.files[0]]
 coord_mean = coords_npz[coords_npz.files[1]]
 coord_std = coords_npz[coords_npz.files[2]]
@@ -224,8 +220,7 @@ for epoch in range(opt.n_epochs):
         break
     if (epoch+1)%20==0:
         sample_image(epoch=epoch+1)
-    if epoch%1==0:
         sample_image(data_num=100)
 
-# sample_image(data_num=100)
+
 save_loss(G_losses, D_losses)
