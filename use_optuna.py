@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -7,14 +5,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torch.utils.data
 from torch.autograd import Variable
-from torchvision import datasets
-from models import Discriminator
+from models import Generator, Discriminator
 import optuna
 
 DEVICE = torch.device("cpu")
-DIR = os.getcwd()
-EPOCHS = 10
-LOG_INTERVAL = 10
 b1 = 0.5
 b2 = 0.999
 FloatTensor = torch.FloatTensor
@@ -29,31 +23,6 @@ perf_mean = perfs_npz[perfs_npz.files[1]]
 perf_std = perfs_npz[perfs_npz.files[2]]
 
 dataset = torch.utils.data.TensorDataset(torch.tensor(coords), torch.tensor(perfs))
-
-class Generator(nn.Module):
-    def __init__(self, latent_dim):
-        super(Generator, self).__init__()
-        def block(in_feat, out_feat, normalize=True):
-            layers = [nn.Linear(in_feat, out_feat)]
-            if normalize:
-                layers.append(nn.BatchNorm1d(out_feat, 0.8))
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
-            return layers
-
-        self.model = nn.Sequential(
-            *block(latent_dim + 1, 64, normalize=False),
-            *block(64, 128),
-            *block(128, 256),
-            *block(256, 512),
-            nn.Linear(512, 496),
-            nn.Tanh()
-        )
-
-    def forward(self, noise, labels):
-        # Concatenate label embedding and image to produce input
-        gen_input = torch.cat((labels, noise), -1)
-        coords = self.model(gen_input)
-        return coords
 
 def objective(trial):
     # Generate the model.
@@ -126,7 +95,7 @@ def objective(trial):
             d_loss.backward()
             optimizer_D.step()
 
-    return abs(d_loss.item()-0.5)
+    return (abs(d_loss.item())+abs(g_loss.item()))/2
 
 if __name__ == "__main__":
     study = optuna.create_study(direction="minimize")

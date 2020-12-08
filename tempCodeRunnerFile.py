@@ -1,1 +1,0 @@
-sample_image(epoch=epoch+1)
