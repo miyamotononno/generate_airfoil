@@ -50,15 +50,15 @@ class Generator(nn.Module):
         self.batch2_1_4 = nn.BatchNorm2d(depth_cpw//8, 0.8)
         
         # Control points
-        self.conv2_1_5_1 = nn.Conv2d(depth_cpw//8, 1, self.kernel_size, stride=(1,2)) # padding='valid'あとで実装しないといけない?
+        self.conv2_1_5_1 = nn.Conv2d(depth_cpw//8, 1, 1, stride=(1,2))
         self.tanh2_1 = nn.Tanh()
             
         # Weights
-        self.conv2_1_5_2 = nn.Conv2d(depth_cpw//8, 1, self.kernel_size, stride=(1,3)) # padding='valid'あとで実装しないといけない?
+        self.conv2_1_5_2 = nn.Conv2d(depth_cpw//8, 1, 1, stride=(1,3))
         self.sigmoid2_1 = nn.Sigmoid()
 
         # 2.2 fully_connected & softmax
-        self.softmax2_2 = nn.Softmax()
+        self.softmax2_2 = nn.Softmax(dim=1)
         self.linear2_2_1 = nn.Linear(1024, 256)
         self.batch2_2_1 = nn.BatchNorm1d(256, 0.8)
         self.linear2_2_2 = nn.Linear(256, coords_size[0]-1)
@@ -68,18 +68,18 @@ class Generator(nn.Module):
     def bazier_layer(self, cp, w, ub):
         num_control_points = bezier_degree + 1
         lbs = ub.repeat(1,1,num_control_points) # batch_size x n_data_points x n_control_points
-        pw1 = torch.range(start=0, end=bezier_degree, dtype=torch.float32)
+        pw1 = torch.arange(start=0, end=num_control_points, dtype=torch.float32)
         pw1 = torch.reshape(pw1, (1,1,-1)) # 1 x 1 x n_control_points
         pw2 = torch.fliplr(pw1)
         lbs = torch.add(torch.multiply(pw1, torch.log(lbs+EPSILON)), torch.multiply(pw2, torch.log(1-lbs+EPSILON))) # batch_size x n_data_points x n_control_points
         lc = torch.add(torch.lgamma(pw1+1), torch.lgamma(pw2+1))
+        
         num_control_points = torch.FloatTensor(num_control_points)
         lc = torch.subtract(torch.lgamma(num_control_points), lc) # 1 x 1 x n_control_points
         lbs = torch.add(lbs, lc) # batch_size x n_data_points x n_control_points
         bs = torch.exp(lbs)
-
         # Compute data points
-        cp_w = torch.multiply(cp, w)
+        cp_w = torch.multiply(cp,w) # cp_w = tf.multiply(cp, w)
         dp = torch.matmul(bs, cp_w) # batch_size x n_data_points x 2
         bs_w = torch.matmul(bs, w) # batch_size x n_data_points x 1
         dp = torch.div(dp, bs_w) # batch_size x n_data_points x 2
@@ -106,7 +106,7 @@ class Generator(nn.Module):
         cp = torch.squeeze(cp) # batch_size x (bezier_degree+1) x 2
         # Weights
         w = self.sigmoid2_1(self.conv2_1_5_2(cpw))
-        w = torch.squeeze(w)
+        w = torch.squeeze(w, dim=1)
 
         # 2.2. softmax
         db = self.softmax2_2(self.linear2_2_2(self.batch2_2_1(self.linear2_2_1(x))))
@@ -116,7 +116,7 @@ class Generator(nn.Module):
         # 3. bezier layer
         dp = self.bazier_layer(cp,w, ub)
 
-        return dp, cp, w, ub, db
+        return dp
 
 class Discriminator(nn.Module):
     def __init__(self):
@@ -125,20 +125,21 @@ class Discriminator(nn.Module):
         self.kernel_size = (4,2)
 
         def block(in_feat, out_feat, training=True): # 入力が192でなく248なので変更の必要あり
-            layers = [nn.ConvTranspose2d(in_feat,
-                                         out_feat,
-                                         self.kernel_size,
-                                         stride=(2,1),
-                                         padding=[self.kernel_size[1]/2, self.kernel_size[0]/2]
-                                         )]
+            layers = [nn.Conv2d(in_feat,
+                                out_feat,
+                                kernel_size=self.kernel_size,
+                                stride=(2,1),
+                                padding=(self.kernel_size[1]//2, self.kernel_size[0]//2))]
             layers.append(nn.BatchNorm2d(out_feat, 0.8))
             layers.append(nn.LeakyReLU(0.2, inplace=True))
             if training:
               layers.append(nn.Dropout(0.4))
             return layers
-
+            
+        self.conv1_1 = nn.Conv2d(1, self.depth//2, kernel_size=self.kernel_size, stride=(2,1), padding=1)
+        self.conv1_2 = nn.Conv2d(1, self.depth//2, kernel_size=self.kernel_size, stride=(2,1), padding=1)
+        # x = tf.layers.conv2d(x, depth*1, kernel_size, strides=(2,1), padding='same')
         self.model = nn.Sequential(
-          *block(1+496, self.depth*1),
           *block(self.depth*1, self.depth*2),
           *block(self.depth*2, self.depth*4),
           *block(self.depth*4, self.depth*8),
@@ -156,6 +157,11 @@ class Discriminator(nn.Module):
             normal_init(self._modules[m], mean, std)
     
     def forward(self, coords, labels):
-        d_in = torch.cat((coords.view(coords.size(0), -1), labels), -1)
-        validity = self.model(d_in)
+        
+        x = F.leaky_relu(self.conv1_1(coords), 0.2)
+        y = F.leaky_relu(self.conv1_2(labels), 0.2)
+        d_in = torch.cat([x, y], 1)
+        print("d_in.shape: ", d_in.shape)
+        d_out = self.model(d_in)
+        validity = F.leaky_relu(d_out)
         return validity

@@ -131,6 +131,7 @@ for epoch in range(opt.n_epochs):
         # Generate a batch of images
         gen_imgs = generator(z, gen_labels)
         # Loss measures generator's ability to fool the discriminator
+        print("gen_imgs.shape", gen_imgs.shape)
         validity = discriminator(gen_imgs, gen_labels)
         # g_loss = adversarial_loss(validity, valid)
         g_loss = - adversarial_loss(validity, fake)
