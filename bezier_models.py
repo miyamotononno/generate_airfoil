@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import numpy as np
 
 n_points = 64
 bezier_degree=31
@@ -64,21 +64,22 @@ class Generator(nn.Module):
         self.linear2_2_2 = nn.Linear(256, coords_size[0]-1)
         self.pad2_2 = nn.ZeroPad2d((1,0,0,0))
 
-    # 3 Bazier Layer
-    def bazier_layer(self, cp, w, ub):
-        num_control_points = bezier_degree + 1
-        lbs = ub.repeat(1,1,num_control_points) # batch_size x n_data_points x n_control_points
-        pw1 = torch.arange(start=0, end=num_control_points, dtype=torch.float32)
+    def berstein(self, n, ub):
+        lbs = ub.repeat(1,1,n) # batch_size x n_data_points x n_control_points
+        pw1 = torch.arange(start=0, end=n, dtype=torch.float32)
         pw1 = torch.reshape(pw1, (1,1,-1)) # 1 x 1 x n_control_points
         pw2 = torch.fliplr(pw1)
         lbs = torch.add(torch.multiply(pw1, torch.log(lbs+EPSILON)), torch.multiply(pw2, torch.log(1-lbs+EPSILON))) # batch_size x n_data_points x n_control_points
         lc = torch.add(torch.lgamma(pw1+1), torch.lgamma(pw2+1))
-        
-        num_control_points = torch.FloatTensor(num_control_points)
-        lc = torch.subtract(torch.lgamma(num_control_points), lc) # 1 x 1 x n_control_points
+        ft = np.full((1,1,n), n)
+        lc = torch.subtract(torch.lgamma(torch.FloatTensor(ft)), lc) # 1 x 1 x n_control_points
         lbs = torch.add(lbs, lc) # batch_size x n_data_points x n_control_points
         bs = torch.exp(lbs)
-        # Compute data points
+        return bs
+
+    def bazier_layer(self, cp, w, ub):
+        num_control_points = bezier_degree + 1
+        bs = self.berstein(num_control_points, ub)
         cp_w = torch.multiply(cp,w) # cp_w = tf.multiply(cp, w)
         dp = torch.matmul(bs, cp_w) # batch_size x n_data_points x 2
         bs_w = torch.matmul(bs, w) # batch_size x n_data_points x 1
@@ -112,11 +113,10 @@ class Generator(nn.Module):
         db = self.softmax2_2(self.linear2_2_2(self.batch2_2_1(self.linear2_2_1(x))))
         ub = torch.cumsum(self.pad2_2(db), dim=1)
         ub = torch.unsqueeze(torch.minimum(ub, torch.Tensor([1.0])), -1) # 1 x n_data_points x 1
-        
         # 3. bezier layer
         dp = self.bazier_layer(cp,w, ub)
 
-        return dp
+        return dp.permute(0,3,1,2)
 
 class Discriminator(nn.Module):
     def __init__(self):
@@ -124,44 +124,50 @@ class Discriminator(nn.Module):
         self.depth = 64
         self.kernel_size = (4,2)
 
-        def block(in_feat, out_feat, training=True): # 入力が192でなく248なので変更の必要あり
-            layers = [nn.Conv2d(in_feat,
-                                out_feat,
-                                kernel_size=self.kernel_size,
-                                stride=(2,1),
-                                padding=(self.kernel_size[1]//2, self.kernel_size[0]//2))]
-            layers.append(nn.BatchNorm2d(out_feat, 0.8))
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
-            if training:
-              layers.append(nn.Dropout(0.4))
-            return layers
-            
-        self.conv1_1 = nn.Conv2d(1, self.depth//2, kernel_size=self.kernel_size, stride=(2,1), padding=1)
-        self.conv1_2 = nn.Conv2d(1, self.depth//2, kernel_size=self.kernel_size, stride=(2,1), padding=1)
-        # x = tf.layers.conv2d(x, depth*1, kernel_size, strides=(2,1), padding='same')
-        self.model = nn.Sequential(
-          *block(self.depth*1, self.depth*2),
-          *block(self.depth*2, self.depth*4),
-          *block(self.depth*4, self.depth*8),
-          *block(self.depth*8, self.depth*16),
-          *block(self.depth*16, self.depth*32),
-          nn.Flatten(),
-          nn.Linear(self.depth*32, self.depth*32),
-          nn.BatchNorm2d(self.depth*32, 0.8),
-          nn.LeakyReLU(0.2, inplace=True),
-          nn.Linear(self.depth*16, 1)
-        )
+        self.conv1 = nn.Conv2d(2, self.depth//2, kernel_size=(2,2), stride=(2,2), padding=1)
+        self.lrelu1 = nn.LeakyReLU(0.2, inplace=True)
+        # self.dropout1 = nn.Dropout(0.4)
+
+        self.conv2 = nn.Conv2d(self.depth//2, self.depth*1, kernel_size=(2,2), stride=(2,2), padding=1)
+        self.lrelu2 = nn.LeakyReLU(0.2, inplace=True)
+        self.dropout2 = nn.Dropout(0.4)
+
+        self.conv3 = nn.Conv2d(self.depth*1, self.depth*2, kernel_size=(2,2), stride=(2,2), padding=1)
+        self.lrelu3 = nn.LeakyReLU(0.2, inplace=True)
+        self.dropout3 = nn.Dropout(0.4)
+
+        self.conv4 = nn.Conv2d(self.depth*2, self.depth*4, kernel_size=(4,2), stride=(2,2), padding=1)
+        self.lrelu4 = nn.LeakyReLU(0.2, inplace=True)
+        self.dropout4 = nn.Dropout(0.4)
+        
+        self.conv5 = nn.Conv2d(self.depth*4, self.depth*8, kernel_size=(4,2), stride=(2,2), padding=1)
+        self.lrelu5 = nn.LeakyReLU(0.2, inplace=True)
+        self.dropout5 = nn.Dropout(0.4)
+
+        self.conv6 = nn.Conv2d(self.depth*8, self.depth*16, kernel_size=(4,2), stride=(2,2), padding=1)
+        self.lrelu6 = nn.LeakyReLU(0.2, inplace=True)
+        self.dropout6 = nn.Dropout(0.4)
+        self.conv7 = nn.Conv2d(self.depth*16, self.depth*32, kernel_size=(4,2), stride=(2,2), padding=1)
+        self.lrelu7 = nn.LeakyReLU(0.2, inplace=True)
+        self.dropout7 = nn.Dropout(0.4)
+        
+        self.flatten = nn.Flatten()
+        self.activation = nn.Sigmoid()
 
     def weight_init(self, mean, std):
         for m in self._modules:
             normal_init(self._modules[m], mean, std)
     
     def forward(self, coords, labels):
-        
-        x = F.leaky_relu(self.conv1_1(coords), 0.2)
-        y = F.leaky_relu(self.conv1_2(labels), 0.2)
-        d_in = torch.cat([x, y], 1)
-        print("d_in.shape: ", d_in.shape)
-        d_out = self.model(d_in)
-        validity = F.leaky_relu(d_out)
+        d_in = torch.cat([coords, labels], 1)
+        d = self.lrelu1(self.conv1(d_in))
+        d = self.dropout2(self.lrelu2(self.conv2(d)))
+        d = self.dropout3(self.lrelu3(self.conv3(d)))
+        d = self.dropout4(self.lrelu4(self.conv4(d)))
+        d = self.dropout5(self.lrelu5(self.conv5(d)))
+        d = self.dropout6(self.lrelu6(self.conv6(d)))
+        d = self.dropout7(self.lrelu7(self.conv7(d)))
+        d = self.flatten(d)
+        d = nn.Linear(d.shape[1], 1)(d)
+        validity = self.activation(d)
         return validity

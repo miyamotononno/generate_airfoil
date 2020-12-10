@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from remove_cl import removed_cl
 # perf = np.load('./data/coefficients.npy')
 # coord = np.load('./data/naca4.npy')
 yonekura_coord_path = "./old/coord_picked.npy"
@@ -14,20 +13,18 @@ new_coords = []
 cLs = []
 for p, co in zip(perfs, coords):
   cl = p[1]
-  if cl in removed_cl:
-    continue
+  coord = co.reshape(-1, 2)
   cLs.append(cl)
-  new_coords.append(co)
+  new_coords.append(coord)
   
-
 
 cLs = np.array(cLs)
 coords = np.array(new_coords)
-print(len(coords))
-hist, bins = np.histogram(cl)
-fig = plt.figure()
-plt.hist(x=cLs, rwidth=0.8, label="CLの分布")
+print(coords.shape)
+np.save('./dataset/yonekura_bezier_perfs.npy', cLs)
+np.save('./dataset/yonekura_bezier_coords.npy', coords)
+# hist, bins = np.histogram(cl)
+# fig = plt.figure()
+# plt.hist(x=cLs, rwidth=0.8, label="CLの分布")
 # plt.show()
-fig.savefig("./cl_yonekura_histogram.png")
-np.save('./dataset/yonekura_perfs.npy', cLs)
-np.save('./dataset/yonekura_coords.npy', coords)
+# fig.savefig("./cl_yonekura_histogram.png")
