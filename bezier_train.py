@@ -74,6 +74,26 @@ def save_loss(G_losses, D_losses):
 def postprocess(X):
     X = np.squeeze(X)
     return X
+
+def save_image(epoch=None, data_num=6):
+    # Sample noise
+    z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim))))
+    # Get labels ranging from 0 to n_classes for n rows
+    labels = Variable(FloatTensor(np.random.normal(loc=0.684418, scale=0.38828725, size=(data_num, opt.n_classes))))
+    gen_coords = generator(z, labels)
+    gen_coords = postprocess(gen_coords.detach().numpy())
+    if epoch is not None:
+        fig, ax = plt.subplots(2,3, sharex=True, sharey=True)
+        for i in range(data_num):
+            label = labels[i][0]
+            for j in range(len(gen_coords[i])):
+                ax[i%2, i//2].plot(gen_coords[i][j][0], gen_coords[i][j][1])
+            cl = round(label.item(), 3)
+            title = 'CL={0}'.format(str(cl))
+            ax[i%2, i//2].set_title(title)
+        fig.savefig("generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
+    else:
+        np.savez("result/bezier_final", labels, gen_coords)
 # ----------
 #  Training
 # ----------
@@ -90,7 +110,7 @@ for epoch in range(opt.n_epochs):
         # Configure input
         real_imgs = Variable(coords.type(FloatTensor)).reshape(batch_size, 1, coord_shape[1], coord_shape[2])
         labels = Variable(torch.reshape(labels.float(), (batch_size, opt.n_classes)))
-        labels = labels.repeat(1,496).reshape(batch_size,  opt.n_classes, coord_shape[1], coord_shape[2])
+        labels = labels.repeat(1,coord_shape[1]*coord_shape[2]).reshape(batch_size,  opt.n_classes, coord_shape[1], coord_shape[2])
         # -----------------
         #  Train Generator
         # -----------------
@@ -103,7 +123,6 @@ for epoch in range(opt.n_epochs):
         gen_labels = Variable(FloatTensor(np.random.normal(loc=0.684418, scale=0.38828725, size=(batch_size, opt.n_classes))))
         # Generate a batch of images
         gen_imgs = generator(z, gen_labels)
-        # print(gen_imgs)
         # Loss measures generator's ability to fool the discriminator
         gen_labels = gen_labels.repeat(1,496).reshape(batch_size, opt.n_classes, 248, 2)
         validity = discriminator(gen_imgs, gen_labels)
@@ -148,8 +167,8 @@ for epoch in range(opt.n_epochs):
     if early_stopping:
         break
     if (epoch+1)%20==0:
-        sample_image(epoch=epoch+1)
-        sample_image(data_num=100)
+        save_image(epoch=epoch+1)
+        save_image(data_num=100)
 
 
 save_loss(G_losses, D_losses)
