@@ -43,12 +43,13 @@ class generator(nn.Module):
         x = F.relu(self.deconv1_1_bn(self.deconv1_1(input)))
         y = F.relu(self.deconv1_2_bn(self.deconv1_2(label)))
         x = torch.cat([x, y], 1)
+        print(x.shape)
         x = F.relu(self.deconv2_bn(self.deconv2(x)))
+        print(x.shape)
         x = F.relu(self.deconv3_bn(self.deconv3(x)))
+        print(x.shape)
         x = self.activation(self.deconv4(x))
-        # x = F.relu(self.deconv4_bn(self.deconv4(x)))
-        # x = F.tanh(self.deconv5(x))
-
+        print(x.shape)
         return x
 
 class discriminator(nn.Module):
@@ -230,7 +231,7 @@ for epoch in range(train_epoch):
     cnt = 0
     for x_, y_ in train_loader:
         cnt+=1
-        if cnt==100:
+        if cnt==50:
           break
         print("epoch{0}_iter_{1}".format(epoch, cnt))
         # train discriminator D

@@ -7,7 +7,7 @@ n_points = 64
 bezier_degree=31
 depth_cpw = 32*8
 EPSILON = 1e-7
-coords_size = (248, 2) 
+coords_size = (248, 2)
 
 
 def normal_init(m, mean, std):
