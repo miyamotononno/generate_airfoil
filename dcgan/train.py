@@ -34,8 +34,10 @@ cuda = True if torch.cuda.is_available() else False
 adversarial_loss = torch.nn.BCELoss()
 
 # Initialize generator and discriminator
-generator = Generator()
+generator = Generator(opt.latent_dim+opt.n_classes)
 discriminator = Discriminator()
+generator.weight_init(mean=0.0, std=0.02)
+discriminator.weight_init(mean=0.0, std=0.02)
 
 def to_cuda(c):
   if torch.cuda.is_available():

@@ -11,27 +11,26 @@ def normal_init(m, mean, std):
         m.bias.data.zero_()
 
 class Generator(nn.Module):
-    def __init__(self, d=64):
+    def __init__(self, d=128):
         
         super(Generator, self).__init__()
         kernel_size = (2,1)
         stride = (2, 1)
-        depth_cpw = 128
 
-        self.deconv1 = nn.ConvTranspose2d(depth_cpw,depth_cpw//2,2,stride,0)
-        self.batch1 = nn.BatchNorm2d(depth_cpw//2, 0.8)
-        self.deconv2 = nn.ConvTranspose2d(depth_cpw//2,depth_cpw//4,kernel_size,stride,0)
-        self.batch2 = nn.BatchNorm2d(depth_cpw//4, 0.8)
-        self.deconv3 = nn.ConvTranspose2d(depth_cpw//4,depth_cpw//8,kernel_size,stride,0)
-        self.batch3 = nn.BatchNorm2d(depth_cpw//8, 0.8)
-        self.deconv4 = nn.ConvTranspose2d(depth_cpw//8,depth_cpw//16,kernel_size,stride,0)
-        self.batch4 = nn.BatchNorm2d(depth_cpw//16, 0.8)
-        self.deconv5 = nn.ConvTranspose2d(depth_cpw//16,depth_cpw//32,(2,1),(4,1),0)
-        self.batch5 = nn.BatchNorm2d(depth_cpw//32, 0.8)
-        self.deconv6 = nn.ConvTranspose2d(depth_cpw//32,depth_cpw//64,kernel_size,stride,0)
-        self.batch6 = nn.BatchNorm2d(depth_cpw//64, 0.8)
-        self.deconv7 = nn.ConvTranspose2d(depth_cpw//64,depth_cpw//128,kernel_size,stride,0)
-        self.batch7 = nn.BatchNorm2d(depth_cpw//128, 0.8)
+        self.deconv1 = nn.ConvTranspose2d(d,d//2,2,stride,0)
+        self.batch1 = nn.BatchNorm2d(d//2, 0.8)
+        self.deconv2 = nn.ConvTranspose2d(d//2,d//4,kernel_size,stride,0)
+        self.batch2 = nn.BatchNorm2d(d//4, 0.8)
+        self.deconv3 = nn.ConvTranspose2d(d//4,d//8,kernel_size,stride,0)
+        self.batch3 = nn.BatchNorm2d(d//8, 0.8)
+        self.deconv4 = nn.ConvTranspose2d(d//8,d//16,kernel_size,stride,0)
+        self.batch4 = nn.BatchNorm2d(d//16, 0.8)
+        self.deconv5 = nn.ConvTranspose2d(d//16,d//32,(2,1),(4,1),0)
+        self.batch5 = nn.BatchNorm2d(d//32, 0.8)
+        self.deconv6 = nn.ConvTranspose2d(d//32,d//64,kernel_size,stride,0)
+        self.batch6 = nn.BatchNorm2d(d//64, 0.8)
+        self.deconv7 = nn.ConvTranspose2d(d//64,d//128,kernel_size,stride,0)
+        self.batch7 = nn.BatchNorm2d(d//128, 0.8)
         self.activation = nn.Tanh()
 
     def weight_init(self, mean, std):
