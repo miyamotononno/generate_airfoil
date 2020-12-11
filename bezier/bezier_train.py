@@ -45,8 +45,8 @@ if cuda:
     adversarial_loss.cuda()
 
 # Configure data loader
-perfs = np.load("./dataset/yonekura_bezier_perfs.npy")
-coords = np.load("./dataset/yonekura_bezier_coords.npy")
+perfs = np.load("../dataset/yonekura_bezier_perfs.npy")
+coords = np.load("../dataset/yonekura_bezier_coords.npy")
 
 dataset = torch.utils.data.TensorDataset(torch.tensor(coords), torch.tensor(perfs))
 dataloader = torch.utils.data.DataLoader(
