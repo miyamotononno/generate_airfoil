@@ -13,9 +13,9 @@ from models import Generator, Discriminator
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
-parser.add_argument("--lr", type=float, default=0.00033683431649185437, help="adam: learning rate")
+parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
@@ -107,7 +107,6 @@ def save_loss(G_losses, D_losses):
 #  Training
 # ----------
 D_losses, G_losses = [], []
-early_stopping = False
 for epoch in range(opt.n_epochs):
     for i, (coords, labels) in enumerate(dataloader):
         batch_size = coords.shape[0]
@@ -133,8 +132,8 @@ for epoch in range(opt.n_epochs):
         gen_imgs = generator(z, gen_labels)
         gen_labels = gen_labels.repeat(1,1,coord_shape[1],coord_shape[2])
         validity = discriminator(gen_imgs, gen_labels)
-        # g_loss = adversarial_loss(validity, valid)
-        g_loss = - adversarial_loss(validity, fake)
+        g_loss = adversarial_loss(validity, valid)
+        # g_loss = - adversarial_loss(validity, fake)
 
         g_loss.backward()
         optimizer_G.step()
@@ -158,9 +157,6 @@ for epoch in range(opt.n_epochs):
 
         d_loss.backward()
         optimizer_D.step()
-        if epoch>40 and (np.isclose(g_loss.item(), 0) or np.isclose(d_loss.item(), 0)):
-            early_stopping = True
-            break
 
         if i==0:
             print(
@@ -171,8 +167,6 @@ for epoch in range(opt.n_epochs):
     D_losses.append(d_loss.item())
     G_losses.append(g_loss.item())
 
-    if early_stopping:
-        break
     if (epoch+1)%20==0:
         save_image(epoch=epoch+1)
         save_image(data_num=100)
