@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import torch
 import statistics
 from models import Generator, Discriminator
-from util import to_cuda, to_cpu, postprocess
+from util import to_cuda, to_cpu, postprocess, save_coords, save_loss
 
 
 parser = argparse.ArgumentParser()
@@ -66,36 +66,15 @@ optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr, betas=(opt
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
 def save_image(epoch=None, data_num=6):
-    # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim,1,1))))
-    # Get labels ranging from 0 to n_classes for n rows
     labels = Variable(FloatTensor(np.random.normal(loc=0.684418, scale=0.38828725, size=(data_num, opt.n_classes,1,1))))
+    labels = to_cpu(labels).detach().numpy()
     gen_coords = to_cpu(generator(z, labels))
     gen_coords = postprocess(gen_coords.detach().numpy())
     if epoch is not None:
-        fig, ax = plt.subplots(2,3, sharex=True, sharey=True)
-        for i in range(data_num):
-            label = labels[i][0]
-            for j in range(len(gen_coords[i])):
-                ax[i%2, i//2].plot(gen_coords[i][j][0], gen_coords[i][j][1])
-            cl = round(label.item(), 3)
-            title = 'CL={0}'.format(str(cl))
-            ax[i%2, i//2].set_title(title)
-        fig.savefig("generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
+        save_coords(gen_coords, labels, "generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
     else:
-        labels = to_cpu(label).detach().numpy()
         np.savez("result/bezier_final", labels, gen_coords)
-
-
-def save_loss(G_losses, D_losses):
-    fig = plt.figure(figsize=(10,5))
-    plt.title("Generator and Discriminator Loss During Training")
-    plt.plot(G_losses,label="G")
-    plt.plot(D_losses,label="D")
-    plt.xlabel("iterations")
-    plt.ylabel("Loss")
-    plt.legend()
-    fig.savefig("result/loss.png")
 
 # ----------
 #  Training
