@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import torch
 import statistics
 from models import Generator, Discriminator
+from util import to_cuda, to_cpu, postprocess
 
 
 parser = argparse.ArgumentParser()
@@ -39,16 +40,13 @@ discriminator = Discriminator()
 generator.weight_init(mean=0.0, std=0.02)
 discriminator.weight_init(mean=0.0, std=0.02)
 
-def to_cuda(c):
-  if torch.cuda.is_available():
-    return c.cuda()
-  else:
-    return c
-
 if cuda:
+    print("this is GPU mode")
     generator.cuda()
     discriminator.cuda()
     adversarial_loss.cuda()
+else:
+    print("this is CPU mode")
 
 # Configure data loader
 perfs = np.load("../dataset/yonekura_bezier_perfs.npy")
@@ -67,17 +65,12 @@ optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr, betas=(opt
 
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
-
-def postprocess(X):
-    X = np.squeeze(X)
-    return X
-
 def save_image(epoch=None, data_num=6):
     # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim,1,1))))
     # Get labels ranging from 0 to n_classes for n rows
     labels = Variable(FloatTensor(np.random.normal(loc=0.684418, scale=0.38828725, size=(data_num, opt.n_classes,1,1))))
-    gen_coords = generator(z, labels).cpu()
+    gen_coords = to_cpu(generator(z, labels))
     gen_coords = postprocess(gen_coords.detach().numpy())
     if epoch is not None:
         fig, ax = plt.subplots(2,3, sharex=True, sharey=True)
@@ -90,7 +83,7 @@ def save_image(epoch=None, data_num=6):
             ax[i%2, i//2].set_title(title)
         fig.savefig("generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
     else:
-        labels = labels.cpu().detach().numpy()
+        labels = to_cpu(label).detach().numpy()
         np.savez("result/bezier_final", labels, gen_coords)
 
 
@@ -162,8 +155,8 @@ for epoch in range(opt.n_epochs):
 
         if i==0:
             print(
-                "[Epoch %d/%d %f] [D loss: %f] [G loss: %f]"
-                % (epoch+1, opt.n_epochs, time.time()-start,d_loss.item(), g_loss.item())
+                "[Epoch %d/%d %ds] [D loss: %f] [G loss: %f]"
+                % (epoch+1, opt.n_epochs, int(time.time()-start),d_loss.item(), g_loss.item())
             )
         
     D_losses.append(d_loss.item())
