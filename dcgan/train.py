@@ -68,9 +68,9 @@ FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 def save_image(epoch=None, data_num=6):
     z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim,1,1))))
     labels = Variable(FloatTensor(np.random.normal(loc=0.684418, scale=0.38828725, size=(data_num, opt.n_classes,1,1))))
-    labels = to_cpu(labels).detach().numpy()
     gen_coords = to_cpu(generator(z, labels))
     gen_coords = postprocess(gen_coords.detach().numpy())
+    labels = to_cpu(labels).detach().numpy()
     if epoch is not None:
         save_coords(gen_coords, labels, "generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
     else:
