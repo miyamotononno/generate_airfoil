@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-
+import time
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
@@ -13,7 +13,7 @@ from models import Generator, Discriminator
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=100, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=21, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
@@ -74,10 +74,10 @@ def postprocess(X):
 
 def save_image(epoch=None, data_num=6):
     # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim))))
+    z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim,1,1))))
     # Get labels ranging from 0 to n_classes for n rows
-    labels = Variable(FloatTensor(np.random.normal(loc=0.684418, scale=0.38828725, size=(data_num, opt.n_classes))))
-    gen_coords = generator(z, labels)
+    labels = Variable(FloatTensor(np.random.normal(loc=0.684418, scale=0.38828725, size=(data_num, opt.n_classes,1,1))))
+    gen_coords = generator(z, labels).cpu()
     gen_coords = postprocess(gen_coords.detach().numpy())
     if epoch is not None:
         fig, ax = plt.subplots(2,3, sharex=True, sharey=True)
@@ -90,6 +90,7 @@ def save_image(epoch=None, data_num=6):
             ax[i%2, i//2].set_title(title)
         fig.savefig("generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
     else:
+        labels = labels.cpu().detach().numpy()
         np.savez("result/bezier_final", labels, gen_coords)
 
 
@@ -101,11 +102,12 @@ def save_loss(G_losses, D_losses):
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.legend()
-    fig.savefig("./result/loss.png")
+    fig.savefig("result/loss.png")
 
 # ----------
 #  Training
 # ----------
+start = time.time()
 D_losses, G_losses = [], []
 for epoch in range(opt.n_epochs):
     for i, (coords, labels) in enumerate(dataloader):
@@ -118,7 +120,7 @@ for epoch in range(opt.n_epochs):
         # Configure input
         real_imgs = Variable(coords.type(FloatTensor).reshape(-1,coord_shape[0],coord_shape[1],coord_shape[2]))
         real_labels = Variable(torch.reshape(labels.float(), (batch_size, opt.n_classes,1,1)))
-        real_labels = real_labels.repeat(1,1,coord_shape[1],coord_shape[2])
+        real_labels = to_cuda(real_labels.repeat(1,1,coord_shape[1],coord_shape[2]))
         # -----------------
         #  Train Generator
         # -----------------
@@ -160,8 +162,8 @@ for epoch in range(opt.n_epochs):
 
         if i==0:
             print(
-                "[Epoch %d/%d] [D loss: %f] [G loss: %f]"
-                % (epoch+1, opt.n_epochs, d_loss.item(), g_loss.item())
+                "[Epoch %d/%d %f] [D loss: %f] [G loss: %f]"
+                % (epoch+1, opt.n_epochs, time.time()-start,d_loss.item(), g_loss.item())
             )
         
     D_losses.append(d_loss.item())
