@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 coords_size = (248, 2)
 
@@ -84,6 +83,7 @@ class Discriminator(nn.Module):
         self.dropout7 = nn.Dropout(0.4)
         
         self.flatten = nn.Flatten()
+        self.linear = nn.Linear(8192, 1)
         self.activation = nn.Sigmoid()
 
     def weight_init(self, mean, std):
@@ -100,6 +100,6 @@ class Discriminator(nn.Module):
         d = self.dropout6(self.lrelu6(self.conv6(d)))
         d = self.dropout7(self.lrelu7(self.conv7(d)))
         d = self.flatten(d)
-        d = nn.Linear(d.shape[1], 1)(d)
+        d = self.linear(d)
         validity = self.activation(d)
         return torch.squeeze(validity)
