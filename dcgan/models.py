@@ -18,18 +18,32 @@ class Generator(nn.Module):
 
         self.deconv1 = nn.ConvTranspose2d(d,d//2,2,stride,0)
         self.batch1 = nn.BatchNorm2d(d//2, 0.8)
+        self.lrelu1 = nn.LeakyReLU(0.2, inplace=True)
+
         self.deconv2 = nn.ConvTranspose2d(d//2,d//4,kernel_size,stride,0)
         self.batch2 = nn.BatchNorm2d(d//4, 0.8)
+        self.lrelu2 = nn.LeakyReLU(0.2, inplace=True)
+
         self.deconv3 = nn.ConvTranspose2d(d//4,d//8,kernel_size,stride,0)
         self.batch3 = nn.BatchNorm2d(d//8, 0.8)
+        self.lrelu3 = nn.LeakyReLU(0.2, inplace=True)
+
         self.deconv4 = nn.ConvTranspose2d(d//8,d//16,kernel_size,stride,0)
         self.batch4 = nn.BatchNorm2d(d//16, 0.8)
+        self.lrelu4 = nn.LeakyReLU(0.2, inplace=True)
+
         self.deconv5 = nn.ConvTranspose2d(d//16,d//32,(2,1),(4,1),0)
         self.batch5 = nn.BatchNorm2d(d//32, 0.8)
+        self.lrelu5 = nn.LeakyReLU(0.2, inplace=True)
+
         self.deconv6 = nn.ConvTranspose2d(d//32,d//64,kernel_size,stride,0)
         self.batch6 = nn.BatchNorm2d(d//64, 0.8)
+        self.lrelu6 = nn.LeakyReLU(0.2, inplace=True)
+
         self.deconv7 = nn.ConvTranspose2d(d//64,d//128,kernel_size,stride,0)
         self.batch7 = nn.BatchNorm2d(d//128, 0.8)
+        self.lrelu7 = nn.LeakyReLU(0.2, inplace=True)
+
         self.activation = nn.Tanh()
 
     def weight_init(self, mean, std):
@@ -38,13 +52,13 @@ class Generator(nn.Module):
 
     def forward(self, noise, labels):
         gen_input = torch.cat((labels, noise), 1)
-        x = F.leaky_relu(self.batch1(self.deconv1(gen_input)), 0.2)
-        x = F.leaky_relu(self.batch2(self.deconv2(x)), 0.2)
-        x = F.leaky_relu(self.batch3(self.deconv3(x)), 0.2)
-        x = F.leaky_relu(self.batch4(self.deconv4(x)), 0.2)
-        x = F.leaky_relu(self.batch5(self.deconv5(x)), 0.2)
-        x = F.leaky_relu(self.batch6(self.deconv6(x)), 0.2)
-        x = F.leaky_relu(self.batch7(self.deconv7(x)), 0.2)
+        x = self.lrelu1(self.batch1(self.deconv1(gen_input)))
+        x = self.lrelu2(self.batch2(self.deconv2(x)))
+        x = self.lrelu3(self.batch3(self.deconv3(x)))
+        x = self.lrelu4(self.batch4(self.deconv4(x)))
+        x = self.lrelu5(self.batch5(self.deconv5(x)))
+        x = self.lrelu6(self.batch6(self.deconv6(x)))
+        x = self.lrelu7(self.batch7(self.deconv7(x)))
         x = self.activation(x)
         return x
 

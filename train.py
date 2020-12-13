@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-
+import time
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 
@@ -10,10 +10,11 @@ import torch.nn.functional as F
 import torch
 import statistics
 from models import Generator, Discriminator
+from util import save_loss, to_cpu, save_coords
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=400, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.00033683431649185437, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
@@ -72,37 +73,18 @@ def sample_image(epoch=None, data_num=6):
     # Get labels ranging from 0 to n_classes for n rows
     labels = np.random.normal(loc=perf_mean, scale=perf_std, size=data_num)
     labels = Variable(torch.reshape(FloatTensor([labels]), (data_num, opt.n_classes)))
-    gen_coords = generator(z, labels).detach().numpy()
+    gen_coords = to_cpu(generator(z, labels)).detach().numpy()
+    labels = to_cpu(labels).detach().numpy()
     if epoch is not None:
-        fig, ax = plt.subplots(2,3, sharex=True, sharey=True)
-        for i in range(data_num):
-            label = labels[i][0]
-            coord = gen_coords[i]*coord_std+coord_mean
-            xs, ys = coord.reshape(2, -1)
-            ax[i%2, i//2].plot(xs, ys)
-            cl = round(label.item(), 3)
-            title = 'CL={0}'.format(str(cl))
-            ax[i%2, i//2].set_title(title)
-        fig.savefig("generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
+        save_coords(gen_coords, labels, "generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
     else:
         np.savez("result/final", labels, gen_coords*coord_std+coord_mean)
-
-
-def save_loss(G_losses, D_losses):
-    fig = plt.figure(figsize=(10,5))
-    plt.title("Generator and Discriminator Loss During Training")
-    plt.plot(G_losses,label="G")
-    plt.plot(D_losses,label="D")
-    plt.xlabel("iterations")
-    plt.ylabel("Loss")
-    plt.legend()
-    fig.savefig("./result/loss.png")
 
 # ----------
 #  Training
 # ----------
+start = time.time()
 D_losses, G_losses = [], []
-early_stopping = False
 for epoch in range(opt.n_epochs):
     for i, (coords, labels) in enumerate(dataloader):
         batch_size = coords.shape[0]
@@ -129,7 +111,6 @@ for epoch in range(opt.n_epochs):
         gen_imgs = generator(z, gen_labels)
         # Loss measures generator's ability to fool the discriminator
         validity = discriminator(gen_imgs, gen_labels)
-        # g_loss = adversarial_loss(validity, valid)
         g_loss = - adversarial_loss(validity, fake)
 
         g_loss.backward()
@@ -154,24 +135,18 @@ for epoch in range(opt.n_epochs):
 
         d_loss.backward()
         optimizer_D.step()
-        if epoch>40 and (np.isclose(g_loss.item(), 0) or np.isclose(d_loss.item(), 0)):
-            early_stopping = True
-            break
 
         if i==0:
             print(
-                "[Epoch %d/%d] [D loss: %f] [G loss: %f]"
-                % (epoch+1, opt.n_epochs, d_loss.item(), g_loss.item())
+                "[Epoch %d/%d %ds] [D loss: %f] [G loss: %f]"
+                % (epoch+1, opt.n_epochs,  int(time.time()-start), d_loss.item(), g_loss.item())
             )
         
     D_losses.append(d_loss.item())
     G_losses.append(g_loss.item())
 
-    if early_stopping:
-        break
     if (epoch+1)%20==0:
         sample_image(epoch=epoch+1)
-        sample_image(data_num=100)
 
-
+sample_image(data_num=100)
 save_loss(G_losses, D_losses)
