@@ -10,13 +10,13 @@ import torch.nn.functional as F
 import torch
 import statistics
 from models import Generator, Discriminator
-from util import save_loss, to_cpu, save_coords, to_cuda
+from util import save_loss, to_cpu, save_coords
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_epochs", type=int, default=400, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
-parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
+parser.add_argument("--lr", type=float, default=0.00033683431649185437, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
@@ -95,7 +95,7 @@ for epoch in range(opt.n_epochs):
 
         # Configure input
         real_imgs = Variable(coords.type(FloatTensor))
-        labels = to_cuda(Variable(torch.reshape(labels.float(), (batch_size, opt.n_classes))))
+        labels = Variable(torch.reshape(labels.float(), (batch_size, opt.n_classes)))
 
         # -----------------
         #  Train Generator
@@ -147,6 +147,7 @@ for epoch in range(opt.n_epochs):
 
     if (epoch+1)%20==0:
         sample_image(epoch=epoch+1)
+        sample_image(data_num=100)
 
-sample_image(data_num=100)
+
 save_loss(G_losses, D_losses)
