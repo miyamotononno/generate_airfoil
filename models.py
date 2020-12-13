@@ -13,7 +13,9 @@ class Generator(nn.Module):
             return layers
 
         self.model = nn.Sequential(
-            *block(latent_dim + 1, 64, normalize=False),
+            *block(latent_dim + 1, 16, normalize=False),
+            *block(16, 32),
+            *block(32, 64),
             *block(64, 128),
             *block(128, 256),
             *block(256, 512),
@@ -40,10 +42,10 @@ class Discriminator(nn.Module):
 
         self.model = nn.Sequential(
             *block(1 + 496, 512, dropout=False),
+            *block(512, 512),
             *block(512, 256),
             *block(256, 128),
             nn.Linear(128, 1),
-            nn.Sigmoid()
         )
 
     def forward(self, coords, labels):
