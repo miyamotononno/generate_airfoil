@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import torch
 import statistics
 from models import Generator, Discriminator
-from util import save_loss, to_cpu, save_coords
+from util import save_loss, to_cpu, save_coords, to_cuda
 
 
 parser = argparse.ArgumentParser()
@@ -95,7 +95,7 @@ for epoch in range(opt.n_epochs):
 
         # Configure input
         real_imgs = Variable(coords.type(FloatTensor))
-        labels = Variable(torch.reshape(labels.float(), (batch_size, opt.n_classes)))
+        labels = to_cuda(Variable(torch.reshape(labels.float(), (batch_size, opt.n_classes))))
 
         # -----------------
         #  Train Generator
