@@ -32,7 +32,7 @@ def save_coords(gen_coords, labels, path):
     
     fig.savefig(path)
 
-def save_loss(G_losses, D_losses):
+def save_loss(G_losses, D_losses, path="result/loss.png"):
     fig = plt.figure(figsize=(10,5))
     plt.title("Generator and Discriminator Loss During Training")
     plt.plot(G_losses,label="G")
@@ -40,4 +40,4 @@ def save_loss(G_losses, D_losses):
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.legend()
-    fig.savefig("result/loss.png")
+    fig.savefig(path)
