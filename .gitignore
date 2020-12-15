@@ -4,3 +4,4 @@ images/
 __pycache__/
 dcgan/data
 dcgan/MNIST_cDCGAN_results/Fixed_results
+send_file.py
