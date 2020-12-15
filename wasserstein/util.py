@@ -28,11 +28,11 @@ def save_coords(gen_coords, labels, path):
         ax[i%3, i//3].plot(x,y)
         cl = round(label.item(), 3)
         title = 'CL={0}'.format(str(cl))
-        ax[i%2, i//2].set_title(title)
+        ax[i%3, i//3].set_title(title)
     
     fig.savefig(path)
 
-def save_loss(G_losses, D_losses, path="result/loss.png"):
+def save_loss(G_losses, D_losses, path="results/loss.png"):
     fig = plt.figure(figsize=(10,5))
     plt.title("Generator and Discriminator Loss During Training")
     plt.plot(G_losses,label="G")

@@ -63,7 +63,7 @@ optimizer_D = torch.optim.RMSprop(discriminator.parameters(), lr=opt.lr)
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
 
-def sample_image(epoch=None, data_num=6):
+def sample_image(epoch=None, data_num=12):
     # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim))))
     # Get labels ranging from 0 to n_classes for n rows
@@ -72,10 +72,10 @@ def sample_image(epoch=None, data_num=6):
     gen_coords = to_cpu(generator(z, labels)).detach().numpy()
     labels = to_cpu(labels).detach().numpy()
     if epoch is not None:
-        save_coords(gen_coords*coord_std+coord_mean, labels, "wasserstein_coord/epoch_{0}".format(str(epoch).zfill(3)))
+        save_coords(gen_coords*coord_std+coord_mean, labels, "coords/epoch_{0}".format(str(epoch).zfill(3)))
     else:
-        save_coords(gen_coords*coord_std+coord_mean, labels, "wasserstein_coord/final")
-        np.savez("wasserstein_result/final", labels, gen_coords*coord_std+coord_mean)
+        np.savez("results/final", labels, gen_coords*coord_std+coord_mean)
+        save_coords(gen_coords*coord_std+coord_mean, labels, "coords/final.png")
 
 # ----------
 #  Training
@@ -151,4 +151,4 @@ for epoch in range(opt.n_epochs):
         batches_done += 1
 
 sample_image(data_num=100)
-save_loss(G_losses, D_losses, path="wasserstein_result/loss.png")
+save_loss(G_losses, D_losses, path="results/loss.png")

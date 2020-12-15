@@ -43,7 +43,7 @@ class Discriminator(nn.Module):
             # *block(512, 512),
             *block(512, 256, dropout=False),
             # *block(256, 128),
-            nn.Linear(128, 1),
+            nn.Linear(256, 1),
         )
 
     def forward(self, coords, labels):
