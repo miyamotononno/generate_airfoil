@@ -5,14 +5,22 @@ import time
 
 """xfoilが入っていないと使えない"""
 
-if True:
+use_dataset = False
+
+if not use_dataset:
   input_path = "./result/final.npz"
   npz = np.load(input_path)
   labels = npz[npz.files[0]]
   coords = npz[npz.files[1]]
 else:
-  labels = np.load('./dataset/perfs.npy')
-  coords = np.load('./dataset/coords.npy')
+  perfs_npz = np.load("./dataset/standardized_perfs.npz")
+  coords_npz = np.load("./dataset/standardized_coords.npz")
+  coords = coords_npz[coords_npz.files[0]]
+  coord_mean = coords_npz[coords_npz.files[1]]
+  coord_std = coords_npz[coords_npz.files[2]]
+  perfs = perfs_npz[perfs_npz.files[0]]
+  perf_mean = perfs_npz[perfs_npz.files[1]]
+  perf_std = perfs_npz[perfs_npz.files[2]]
 
 xf = XFoil()
 xf.print = False
@@ -20,6 +28,7 @@ angle = 5
 cnt = 0
 print("start calculating!")
 start = time.time()
+coords = coords*coord_std+coord_mean if use_dataset else coords
 for label, coord in zip(labels, coords):
   xf.Re = 3e6
   xf.max_iter = 100
