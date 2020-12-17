@@ -17,8 +17,8 @@ from util import save_loss, to_cpu, save_coords, to_cuda
 parser = argparse.ArgumentParser()
 parser.add_argument("--n_epochs", type=int, default=200, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
-parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate") # 1e-4
-parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient") # 0.0
+parser.add_argument("--lr", type=float, default=0.0001, help="adam: learning rate") # 1e-4
+parser.add_argument("--b1", type=float, default=0, help="adam: decay of first order momentum of gradient") # 0.0
 parser.add_argument("--b2", type=float, default=0.9, help="adam: decay of first order momentum of gradient") # 0.9
 parser.add_argument("--latent_dim", type=int, default=4, help="dimensionality of the latent space")
 parser.add_argument("--n_classes", type=int, default=1, help="number of classes for dataset")
