@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-coords_size = (248, 2)
+coord_shape= (1, 248, 2)
 
 def normal_init(m, mean, std):
     if isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv2d):
@@ -115,5 +115,4 @@ class Discriminator(nn.Module):
         d = self.dropout7(self.lrelu7(self.conv7(d)))
         d = self.flatten(d)
         d = self.linear(d)
-        validity = self.activation(d)
-        return torch.squeeze(validity)
+        return torch.squeeze(d)

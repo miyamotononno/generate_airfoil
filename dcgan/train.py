@@ -72,9 +72,9 @@ def save_image(epoch=None, data_num=6):
     gen_coords = postprocess(gen_coords.detach().numpy())
     labels = to_cpu(labels).detach().numpy()
     if epoch is not None:
-        save_coords(gen_coords, labels, "generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
+        save_coords(gen_coords, labels, "coords/epoch_{0}".format(str(epoch).zfill(3)))
     else:
-        np.savez("result/bezier_final", labels, gen_coords)
+        np.savez("results/final", labels, gen_coords)
 
 # ----------
 #  Training
