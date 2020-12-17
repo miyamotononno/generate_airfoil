@@ -20,12 +20,11 @@ parser.add_argument("--batch_size", type=int, default=64, help="size of the batc
 parser.add_argument("--lr", type=float, default=0.0001, help="adam: learning rate") # 1e-4
 parser.add_argument("--b1", type=float, default=0, help="adam: decay of first order momentum of gradient") # 0.0
 parser.add_argument("--b2", type=float, default=0.9, help="adam: decay of first order momentum of gradient") # 0.9
-parser.add_argument("--latent_dim", type=int, default=4, help="dimensionality of the latent space")
+parser.add_argument("--latent_dim", type=int, default=3, help="dimensionality of the latent space")
 parser.add_argument("--n_classes", type=int, default=1, help="number of classes for dataset")
 parser.add_argument("--coord_size", type=int, default=496, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
 parser.add_argument("--n_critic", type=int, default=5, help="number of training steps for discriminator per iter")
-parser.add_argument("--clip_value", type=float, default=0.01, help="lower and upper clip value for disc. weights")
 parser.add_argument("--sample_interval", type=int, default=4000, help="interval betwen image samples")
 opt = parser.parse_args()
 # print(opt)
