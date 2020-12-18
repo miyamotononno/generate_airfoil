@@ -39,6 +39,8 @@ lambda_gp = 10
 # Initialize generator and discriminator
 generator = Generator(opt.latent_dim+opt.n_classes)
 discriminator = Discriminator()
+generator.weight_init(mean=0.0, std=0.02)
+discriminator.weight_init(mean=0.0, std=0.02)
 
 if cuda:
     print("use Cuda")
@@ -79,7 +81,8 @@ def sample_image(epoch=None, data_num=12):
     gen_coords = to_cpu(generator(z, labels)).detach().numpy()
     labels = to_cpu(labels).detach().numpy()
     if epoch is not None:
-        save_coords(gen_coords*coord_std+coord_mean, labels, "coords/epoch_{0}".format(str(epoch).zfill(3)))
+        save_coords(gen_coords*coord_std+coord_mean, labels, "coords/epoch_{0}".format(str(epoch).zfill(3)))  
+        np.savez("results/final", labels, gen_coords*coord_std+coord_mean)
     else:
         np.savez("results/final", labels, gen_coords*coord_std+coord_mean)
         save_coords(gen_coords*coord_std+coord_mean, labels, "coords/final.png")
@@ -122,6 +125,7 @@ for epoch in range(opt.n_epochs):
         # Configure input
         real_imgs = Variable(coords.type(FloatTensor).reshape(-1, *coord_shape))
         labels = Variable(torch.reshape(labels.float(), (batch_size, opt.n_classes,1,1)))
+        labels = to_cuda(labels)
         # ---------------------
         #  Train Discriminator
         # ---------------------
