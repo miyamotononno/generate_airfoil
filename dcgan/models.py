@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils import spectral_norm
 
 coord_shape= (1, 248, 2)
 
@@ -114,12 +115,12 @@ class Discriminator(nn.Module):
     def forward(self, coords, labels):
         d_in = torch.cat([coords, labels], 1)
         d = self.dropout1(self.lrelu1(self.conv1(d_in)))
-        d = self.batchnorm2(self.dropout2(self.lrelu2(self.conv2(d))))
-        d = self.batchnorm3(self.dropout3(self.lrelu3(self.conv3(d))))
-        d = self.batchnorm4(self.dropout4(self.lrelu4(self.conv4(d))))
-        d = self.batchnorm5(self.dropout5(self.lrelu5(self.conv5(d))))
-        d = self.batchnorm6(self.dropout6(self.lrelu6(self.conv6(d))))
-        d = self.batchnorm7(self.dropout7(self.lrelu7(self.conv7(d))))
+        d = self.dropout2(self.lrelu2(self.batchnorm2(self.conv2(d))))
+        d = self.dropout3(self.lrelu3(self.batchnorm3(self.conv3(d))))
+        d = self.dropout4(self.lrelu4(self.batchnorm4(self.conv4(d))))
+        d = self.dropout5(self.lrelu5(self.batchnorm5(self.conv5(d))))
+        d = self.dropout6(self.lrelu6(self.batchnorm6(self.conv6(d))))
+        d = self.dropout7(self.lrelu7(self.batchnorm7(self.conv7(d))))
         d = self.flatten(d)
         d = self.linear(d)
         return torch.squeeze(d)
@@ -168,13 +169,13 @@ class SND(nn.Module):
     
     def forward(self, coords, labels):
         d_in = torch.cat([coords, labels], 1)
-        d = self.dropout1(self.lrelu1(self.conv1(d_in)))
-        d = self.dropout2(self.lrelu2(self.conv2(d)))
-        d = self.dropout3(self.lrelu3(self.conv3(d)))
-        d = self.dropout4(self.lrelu4(self.conv4(d)))
-        d = self.dropout5(self.lrelu5(self.conv5(d)))
-        d = self.dropout6(self.lrelu6(self.conv6(d)))
-        d = self.dropout7(self.lrelu7(self.conv7(d)))
+        d = spectral_norm(self.dropout1(self.lrelu1(self.conv1(d_in))))
+        d = spectral_norm(self.dropout2(self.lrelu2(self.conv2(d))))
+        d = spectral_norm(self.dropout3(self.lrelu3(self.conv3(d))))
+        d = spectral_norm(self.dropout4(self.lrelu4(self.conv4(d))))
+        d = spectral_norm(self.dropout5(self.lrelu5(self.conv5(d))))
+        d = spectral_norm(self.dropout6(self.lrelu6(self.conv6(d))))
+        d = spectral_norm(self.dropout7(self.lrelu7(self.conv7(d))))
         d = self.flatten(d)
         d = self.linear(d)
         return torch.squeeze(d)
