@@ -15,7 +15,7 @@ from util import save_loss, to_cpu, save_coords, to_cuda
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=2000, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=10000, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0001, help="adam: learning rate") # 1e-4
 parser.add_argument("--b1", type=float, default=0, help="adam: decay of first order momentum of gradient") # 0.0
@@ -25,7 +25,7 @@ parser.add_argument("--n_classes", type=int, default=1, help="number of classes 
 parser.add_argument("--coord_size", type=int, default=496, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
 parser.add_argument("--n_critic", type=int, default=5, help="number of training steps for discriminator per iter")
-parser.add_argument("--sample_interval", type=int, default=4000, help="interval betwen image samples")
+parser.add_argument("--sample_interval", type=int, default=10000, help="interval betwen image samples")
 opt = parser.parse_args()
 # print(opt)
 
@@ -170,8 +170,8 @@ for epoch in range(opt.n_epochs):
                     % (epoch+1, opt.n_epochs,  int(time.time()-start), d_loss.item(), g_loss.item())
                 )
         
-            D_losses.append(d_loss.item())
-            G_losses.append(g_loss.item())
+                D_losses.append(d_loss.item())
+                G_losses.append(g_loss.item())
     
             if batches_done%opt.sample_interval==0:
                 sample_image(epoch=epoch+1)
