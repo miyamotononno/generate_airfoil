@@ -74,36 +74,29 @@ class Discriminator(nn.Module):
 
         self.conv1 = nn.Conv2d(2, self.depth//2, kernel_size=(2,2), stride=stride, padding=padding)
         self.lrelu1 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout1 = nn.Dropout2d(0.2)
 
         self.conv2 = nn.Conv2d(self.depth//2, self.depth*1, kernel_size=(2,2), stride=stride, padding=padding)
         self.lrelu2 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout2 = nn.Dropout2d(0.2)
         self.batchnorm2 = nn.BatchNorm2d(self.depth*1, 0.8)
 
         self.conv3 = nn.Conv2d(self.depth*1, self.depth*2, kernel_size=(2,2), stride=stride, padding=padding)
         self.lrelu3 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout3 = nn.Dropout2d(0.2)
         self.batchnorm3 = nn.BatchNorm2d(self.depth*2, 0.8)
 
         self.conv4 = nn.Conv2d(self.depth*2, self.depth*4, kernel_size, stride=stride, padding=padding)
         self.lrelu4 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout4 = nn.Dropout2d(0.2)
         self.batchnorm4 = nn.BatchNorm2d(self.depth*4, 0.8)
         
         self.conv5 = nn.Conv2d(self.depth*4, self.depth*8, kernel_size, stride=stride, padding=padding)
         self.lrelu5 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout5 = nn.Dropout2d(0.2)
         self.batchnorm5 = nn.BatchNorm2d(self.depth*8, 0.8)
 
         self.conv6 = nn.Conv2d(self.depth*8, self.depth*16, kernel_size, stride=stride, padding=padding)
         self.lrelu6 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout6 = nn.Dropout2d(0.2)
         self.batchnorm6 = nn.BatchNorm2d(self.depth*16, 0.8)
 
         self.conv7 = nn.Conv2d(self.depth*16, self.depth*32, kernel_size, stride=stride, padding=padding)
         self.lrelu7 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout7 = nn.Dropout2d(0.2)
         self.batchnorm7 = nn.BatchNorm2d(self.depth*32, 0.8)
         
         self.flatten = nn.Flatten()
@@ -115,13 +108,13 @@ class Discriminator(nn.Module):
     
     def forward(self, coords, labels):
         d_in = torch.cat([coords, labels], 1)
-        d = self.dropout1(self.lrelu1(self.conv1(d_in)))
-        d = self.dropout2(self.lrelu2(self.batchnorm2(self.conv2(d))))
-        d = self.dropout3(self.lrelu3(self.batchnorm3(self.conv3(d))))
-        d = self.dropout4(self.lrelu4(self.batchnorm4(self.conv4(d))))
-        d = self.dropout5(self.lrelu5(self.batchnorm5(self.conv5(d))))
-        d = self.dropout6(self.lrelu6(self.batchnorm6(self.conv6(d))))
-        d = self.dropout7(self.lrelu7(self.batchnorm7(self.conv7(d))))
+        d = self.lrelu1(self.conv1(d_in))
+        d = self.lrelu2(self.batchnorm2(self.conv2(d)))
+        d = self.lrelu3(self.batchnorm3(self.conv3(d)))
+        d = self.lrelu4(self.batchnorm4(self.conv4(d)))
+        d = self.lrelu5(self.batchnorm5(self.conv5(d)))
+        d = self.lrelu6(self.batchnorm6(self.conv6(d)))
+        d = self.lrelu7(self.batchnorm7(self.conv7(d)))
         d = self.flatten(d)
         d = self.linear(d)
         return torch.squeeze(d)
@@ -130,35 +123,30 @@ class SND(nn.Module):
     def __init__(self):
         super(SND, self).__init__()
         self.depth = 64
-        self.kernel_size = (4,2)
+        kernel_size = (4,2)
+        stride=(2,2)
+        padding=1
 
-        self.conv1 = nn.Conv2d(2, self.depth//2, kernel_size=(2,2), stride=(2,2), padding=1)
+        self.conv1 = nn.Conv2d(2, self.depth//2, kernel_size=(2,2), stride=stride, padding=padding)
         self.lrelu1 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout1 = nn.Dropout2d(0.2)
 
-        self.conv2 = nn.Conv2d(self.depth//2, self.depth*1, kernel_size=(2,2), stride=(2,2), padding=1)
+        self.conv2 = nn.Conv2d(self.depth//2, self.depth*1, kernel_size=(2,2), stride=stride, padding=padding)
         self.lrelu2 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout2 = nn.Dropout2d(0.2)
 
-        self.conv3 = nn.Conv2d(self.depth*1, self.depth*2, kernel_size=(2,2), stride=(2,2), padding=1)
+        self.conv3 = nn.Conv2d(self.depth*1, self.depth*2, kernel_size=(2,2), stride=stride, padding=padding)
         self.lrelu3 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout3 = nn.Dropout2d(0.2)
 
-        self.conv4 = nn.Conv2d(self.depth*2, self.depth*4, kernel_size=(4,2), stride=(2,2), padding=1)
+        self.conv4 = nn.Conv2d(self.depth*2, self.depth*4, kernel_size, stride, padding)
         self.lrelu4 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout4 = nn.Dropout2d(0.2)
-        
-        self.conv5 = nn.Conv2d(self.depth*4, self.depth*8, kernel_size=(4,2), stride=(2,2), padding=1)
+
+        self.conv5 = nn.Conv2d(self.depth*4, self.depth*8, kernel_size, stride, padding=1)
         self.lrelu5 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout5 = nn.Dropout2d(0.2)
 
-        self.conv6 = nn.Conv2d(self.depth*8, self.depth*16, kernel_size=(4,2), stride=(2,2), padding=1)
+        self.conv6 = nn.Conv2d(self.depth*8, self.depth*16, kernel_size, stride, padding=1)
         self.lrelu6 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout6 = nn.Dropout2d(0.2)
 
-        self.conv7 = nn.Conv2d(self.depth*16, self.depth*32, kernel_size=(4,2), stride=(2,2), padding=1)
+        self.conv7 = nn.Conv2d(self.depth*16, self.depth*32, kernel_size, stride, padding=1)
         self.lrelu7 = nn.LeakyReLU(0.2, inplace=True)
-        self.dropout7 = nn.Dropout2d(0.2)
         
         self.flatten = nn.Flatten()
         self.linear = nn.Linear(8192, 1)
@@ -170,13 +158,13 @@ class SND(nn.Module):
     
     def forward(self, coords, labels):
         d_in = torch.cat([coords, labels], 1)
-        d = spectral_norm(self.dropout1(self.lrelu1(self.conv1(d_in))))
-        d = spectral_norm(self.dropout2(self.lrelu2(self.conv2(d))))
-        d = spectral_norm(self.dropout3(self.lrelu3(self.conv3(d))))
-        d = spectral_norm(self.dropout4(self.lrelu4(self.conv4(d))))
-        d = spectral_norm(self.dropout5(self.lrelu5(self.conv5(d))))
-        d = spectral_norm(self.dropout6(self.lrelu6(self.conv6(d))))
-        d = spectral_norm(self.dropout7(self.lrelu7(self.conv7(d))))
+        d = self.lrelu1(spectral_norm(self.conv1(d_in)))
+        d = self.lrelu2(spectral_norm(self.conv2(d)))
+        d = self.lrelu3(spectral_norm(self.conv3(d)))
+        d = self.lrelu4(spectral_norm(self.conv4(d)))
+        d = self.lrelu5(spectral_norm(self.conv5(d)))
+        d = self.lrelu6(spectral_norm(self.conv6(d)))
+        d = self.lrelu7(spectral_norm(self.conv7(d)))
         d = self.flatten(d)
         d = self.linear(d)
         return torch.squeeze(d)
