@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch
+from torch.nn.utils import spectral_norm 
 
 coord_shape = (1, 496)
 
@@ -46,6 +47,26 @@ class Discriminator(nn.Module):
             *block(512, 256, dropout=False),
             # *block(256, 128),
             nn.Linear(256, 1),
+        )
+
+    def forward(self, coords, labels):
+        # Concatenate label embedding and image to produce input
+        c_coords = torch.cat((coords.view(coords.size(0), -1), labels), -1)
+        c_coords_flat = c_coords.view(c_coords.shape[0], -1)
+        validity = self.model(c_coords_flat)
+        return validity
+
+class SND(nn.Module):
+    def __init__(self):
+        super(SND, self).__init__()
+
+        self.model = nn.Sequential(
+            spectral_norm(nn.Linear(1+496, 512)),
+            nn.LeakyReLU(0.2, inplace=True),
+            spectral_norm(nn.Linear(512, 256)),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(256, 1),
+            nn.Sigmoid()
         )
 
     def forward(self, coords, labels):

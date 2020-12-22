@@ -10,12 +10,12 @@ import torch.nn.functional as F
 import torch
 import torch.autograd as autograd
 import statistics
-from models import Generator, Discriminator
+from models import Generator, Discriminator, SND
 from util import save_loss, to_cpu, save_coords, to_cuda
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=10000, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=2000, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0001, help="adam: learning rate") # 1e-4
 parser.add_argument("--b1", type=float, default=0, help="adam: decay of first order momentum of gradient") # 0.0
@@ -38,7 +38,8 @@ lambda_gp = 10
 
 # Initialize generator and discriminator
 generator = Generator(opt.latent_dim)
-discriminator = Discriminator()
+#discriminator = Discriminator()
+discriminator = SND()
 
 if cuda:
     print("use GPU")
