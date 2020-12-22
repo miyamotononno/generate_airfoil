@@ -34,32 +34,6 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
 
-        def block(in_feat, out_feat, dropout=True):
-            layers = [nn.Linear(in_feat, out_feat)]
-            if dropout:
-                layers.append(nn.Dropout(0.4))
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
-            return layers
-
-        self.model = nn.Sequential(
-            *block(1 + 496, 512, dropout=False),
-            # *block(512, 512),
-            *block(512, 256, dropout=False),
-            # *block(256, 128),
-            nn.Linear(256, 1),
-        )
-
-    def forward(self, coords, labels):
-        # Concatenate label embedding and image to produce input
-        c_coords = torch.cat((coords.view(coords.size(0), -1), labels), -1)
-        c_coords_flat = c_coords.view(c_coords.shape[0], -1)
-        validity = self.model(c_coords_flat)
-        return validity
-
-class SND(nn.Module):
-    def __init__(self):
-        super(SND, self).__init__()
-
         self.model = nn.Sequential(
             spectral_norm(nn.Linear(1+496, 512)),
             nn.LeakyReLU(0.2, inplace=True),
