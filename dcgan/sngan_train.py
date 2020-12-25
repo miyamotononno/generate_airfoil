@@ -9,13 +9,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import statistics
-from models import Generator, Discriminator
+from models import Generator, SND
 from util import to_cuda, to_cpu, postprocess, save_coords, save_loss
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=21, help="number of epochs of training")
-parser.add_argument("--batch_size", type=int, default=32, help="size of the batches")
+parser.add_argument("--n_epochs", type=int, default=2000, help="number of epochs of training")
+parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
 parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
@@ -36,7 +36,7 @@ adversarial_loss = torch.nn.BCELoss()
 
 # Initialize generator and discriminator
 generator = Generator(opt.latent_dim+opt.n_classes)
-discriminator = Discriminator()
+discriminator = SND()
 generator.weight_init(mean=0.0, std=0.02)
 discriminator.weight_init(mean=0.0, std=0.02)
 
@@ -45,12 +45,18 @@ if cuda:
     generator.cuda()
     discriminator.cuda()
     adversarial_loss.cuda()
-else:
-    print("this is CPU mode")
 
 # Configure data loader
-perfs = np.load("../dataset/yonekura_bezier_perfs.npy")
-coords = np.load("../dataset/yonekura_bezier_coords.npy")
+perfs_npz = np.load("../dataset/standardized_perfs.npz")
+coords_npz = np.load("../dataset/standardized_coords.npz")
+coords = coords_npz[coords_npz.files[0]]
+coord_mean = coords_npz[coords_npz.files[1]]
+coord_mean = coord_mean.reshape(-1, 2)
+coord_std = coords_npz[coords_npz.files[2]]
+coord_std = coord_std.reshape(-1, 2)
+perfs = perfs_npz[perfs_npz.files[0]]
+perf_mean = perfs_npz[perfs_npz.files[1]]
+perf_std = perfs_npz[perfs_npz.files[2]]
 
 dataset = torch.utils.data.TensorDataset(torch.tensor(coords), torch.tensor(perfs))
 dataloader = torch.utils.data.DataLoader(
@@ -65,16 +71,20 @@ optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr, betas=(opt
 
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
-def save_image(epoch=None, data_num=6):
+def sample_image(epoch=None, data_num=12):
+    # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim,1,1))))
-    labels = Variable(FloatTensor(np.random.normal(loc=0.684418, scale=0.38828725, size=(data_num, opt.n_classes,1,1))))
-    gen_coords = to_cpu(generator(z, labels))
-    gen_coords = postprocess(gen_coords.detach().numpy())
+    # Get labels ranging from 0 to n_classes for n rows
+    labels = np.random.normal(loc=perf_mean, scale=perf_std, size=(data_num, opt.n_classes,1,1))
+    labels = Variable(FloatTensor(labels))
+    gen_coords = to_cpu(generator(z, labels)).detach().numpy()
     labels = to_cpu(labels).detach().numpy()
     if epoch is not None:
-        save_coords(gen_coords, labels, "coords/epoch_{0}".format(str(epoch).zfill(3)))
+        save_coords(gen_coords*coord_std+coord_mean, labels, "coords/epoch_{0}".format(str(epoch).zfill(3)))  
+        np.savez("results/final", labels, gen_coords*coord_std+coord_mean)
     else:
-        np.savez("results/final", labels, gen_coords)
+        np.savez("results/final", labels, gen_coords*coord_std+coord_mean)
+        save_coords(gen_coords*coord_std+coord_mean, labels, "coords/final.png")
 
 # ----------
 #  Training
@@ -86,8 +96,8 @@ for epoch in range(opt.n_epochs):
         batch_size = coords.shape[0]
 
         # Adversarial ground truths
-        valid = Variable(to_cuda(torch.ones(batch_size)), requires_grad=False)
-        fake = Variable(to_cuda(torch.zeros(batch_size)), requires_grad=False)
+        valid = Variable(FloatTensor(batch_size, 1).fill_(1.0), requires_grad=False)
+        fake = Variable(FloatTensor(batch_size, 1).fill_(0.0), requires_grad=False)
 
         # Configure input
         real_imgs = Variable(coords.type(FloatTensor).reshape(-1,coord_shape[0],coord_shape[1],coord_shape[2]))
