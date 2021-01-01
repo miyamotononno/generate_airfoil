@@ -15,7 +15,7 @@ from util import save_loss, to_cpu, save_coords, to_cuda
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=50000, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=40000, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0001, help="adam: learning rate") # 1e-4
 parser.add_argument("--b1", type=float, default=0, help="adam: decay of first order momentum of gradient") # 0.0
@@ -177,9 +177,11 @@ for epoch in range(opt.n_epochs):
             if batches_done%sample_interval==0:
                 sample_interval *= 2
                 sample_image(epoch=epoch+1)
+                torch.save(generator.state_dict(), "results/generator_params_{0}".format(epoch))
+                torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(epoch))
             batches_done += opt.n_critic
 
 sample_image(data_num=100)
 save_loss(G_losses, D_losses, path="results/loss.png")
-torch.save(generator.state_dict(), "results/generator_params")
-torch.save(discriminator.state_dict(), "results/discriminator_params")
+
+
