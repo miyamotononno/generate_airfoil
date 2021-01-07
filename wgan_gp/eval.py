@@ -41,7 +41,7 @@ def sample_image(data_num=12):
     save_coords(gen_coords*coord_std+coord_mean, labels, "coords/eval.png")
 
 
-G_PATH = "results/generator_params_21845" 
+G_PATH = "results/generator_params_40000" 
 G = Generator(latent_dim)
 G.load_state_dict(torch.load(G_PATH, map_location=torch.device('cpu')))
 G.eval()
