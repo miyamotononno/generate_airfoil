@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from calc_cl import get_cl
 
 def to_cuda(c):
   if torch.cuda.is_available():
@@ -18,19 +19,45 @@ def postprocess(X):
     X = np.squeeze(X)
     return X
 
+def save_coords_by_cl(gen_coords, cl_c, path):
+    data_size = gen_coords.shape[0]
+    fig, ax = plt.subplots(4,min(5, data_size//4), sharex=True, sharey=True)
+    fig.suptitle("CL={0}".format(cl_c))
+    plt.subplots_adjust(hspace=0.6)
+    for i in range(min(20, data_size)):
+        coord = gen_coords[i]
+        # cl_r = get_cl(coord)
+        cl_r = 0.65
+        x,y = coord.reshape(2, -1)
+        if not np.isnan(cl_r):
+          cl = round(cl_r, 4)
+          title = str(cl)
+          ax[i%4, i//4].set_title(title)
+          ax[i%4, i//4].plot(x,y)
+        else:
+          title = "uncalculated"
+          ax[i%4, i//4].plot(x,y, color='r')
+          ax[i%4, i//4].set_title(title)
+    
+    # plt.show()
+    fig.savefig(path)
+
+
 def save_coords(gen_coords, labels, path):
     data_size = gen_coords.shape[0]
-    fig, ax = plt.subplots(3,min(4, data_size//3), sharex=True, sharey=True)
-    for i in range(min(12, data_size)):
+    fig, ax = plt.subplots(4,min(5, data_size//4), sharex=True, sharey=True)
+    plt.subplots_adjust(hspace=0.6)
+    for i in range(min(20, data_size)):
         coord = gen_coords[i]
         label = labels[i]
-        x,y = coord.reshape(2, 248)
-        ax[i%3, i//3].plot(x,y)
-        cl = round(label.item(), 3)
+        x,y = coord.reshape(2, -1)
+        ax[i%4, i//4].plot(x,y)
+        cl = round(label.item(), 4)
         title = 'CL={0}'.format(str(cl))
-        ax[i%3, i//3].set_title(title)
+        ax[i%4, i//4].set_title(title)
     
-    fig.savefig(path)
+    plt.show()
+    # fig.savefig(path)
 
 def save_loss(G_losses, D_losses, path="results/loss.png"):
     fig = plt.figure(figsize=(10,5))

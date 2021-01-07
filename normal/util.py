@@ -20,16 +20,17 @@ def postprocess(X):
 
 def save_coords(gen_coords, labels, path):
     data_size = gen_coords.shape[0]
-    fig, ax = plt.subplots(2,data_size//2, sharex=True, sharey=True)
-    for i in range(data_size):
+    fig, ax = plt.subplots(3,min(4, data_size//3), sharex=True, sharey=True)
+    for i in range(min(12, data_size)):
         coord = gen_coords[i]
         label = labels[i]
         x,y = coord.reshape(2, 248)
-        ax[i%2, i//2].plot(x,y)
+        ax[i%3, i//3].plot(x,y)
         cl = round(label.item(), 3)
         title = 'CL={0}'.format(str(cl))
-        ax[i%2, i//2].set_title(title)
-    
+        ax[i%3, i//3].set_title(title)
+
+    # plt.show()    
     fig.savefig(path)
 
 def save_loss(G_losses, D_losses, path="result/loss.png"):

@@ -109,7 +109,6 @@ def compute_gradient_penalty(D, real_samples, fake_samples, labels):
 start = time.time()
 D_losses, G_losses = [], []
 batches_done = 0
-sample_interval = 1
 for epoch in range(opt.n_epochs):
     for i, (coords, labels) in enumerate(dataloader):
         batch_size = coords.shape[0]
@@ -173,14 +172,15 @@ for epoch in range(opt.n_epochs):
         
                 D_losses.append(d_loss.item())
                 G_losses.append(g_loss.item())
-    
-            if batches_done%sample_interval==0:
-                sample_interval *= 2
-                sample_image(epoch=epoch+1)
-                torch.save(generator.state_dict(), "results/generator_params_{0}".format(epoch))
-                torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(epoch))
-            batches_done += opt.n_critic
 
+
+            batches_done += opt.n_critic
+        if epoch % 5000 == 0:
+            torch.save(generator.state_dict(), "results/generator_params_{0}".format(epoch))
+            torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(epoch))
+
+torch.save(generator.state_dict(), "results/generator_params_{0}".format(opt.n_epochs))
+torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(opt.n_epochs))
 sample_image(data_num=100)
 save_loss(G_losses, D_losses, path="results/loss.png")
 
