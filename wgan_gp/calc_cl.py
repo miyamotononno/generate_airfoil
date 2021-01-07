@@ -37,13 +37,12 @@ if __name__ == "__main__":
 
   xf = XFoil()
   xf.print = False
-  angle = 5
   cnt = 0
   print("start calculating!")
   start = time.time()
   coords = coords*coord_std+coord_mean if use_dataset else coords
   for label, coord in zip(labels, coords):
-    cl = calc_cl(xf, coord)
+    cl = get_cl(xf, coord)
     if not np.isnan(cl):
       cnt+=1
       if type(label) is np.float64:
