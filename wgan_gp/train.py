@@ -55,6 +55,8 @@ perfs = perfs_npz[perfs_npz.files[0]]
 perf_mean = perfs_npz[perfs_npz.files[1]]
 perf_std = perfs_npz[perfs_npz.files[2]]
 
+max_cl = 1.551
+
 dataset = torch.utils.data.TensorDataset(torch.tensor(coords), torch.tensor(perfs))
 dataloader = torch.utils.data.DataLoader(
   dataset,
@@ -71,9 +73,8 @@ FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 def sample_image(epoch=None, data_num=12):
     # Sample noise
     z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim))))
-    # Get labels ranging from 0 to n_classes for n rows
-    labels = np.random.normal(loc=perf_mean, scale=perf_std, size=data_num)
-    labels = Variable(torch.reshape(FloatTensor([labels]), (data_num, opt.n_classes)))
+    labels = max_cl*np.random.random_sample(size=(data_num, opt.n_classes))
+    labels = Variable(FloatTensor(labels))
     gen_coords = to_cpu(generator(z, labels)).detach().numpy()
     labels = to_cpu(labels).detach().numpy()
     if epoch is not None:
@@ -155,12 +156,11 @@ for epoch in range(opt.n_epochs):
             # -----------------
 
             # Generate a batch of images
-            gen_labels = Variable(FloatTensor(np.random.normal(loc=perf_mean, scale=perf_std, size=(batch_size, opt.n_classes))))
+            gen_labels = Variable(FloatTensor(max_cl*np.random.random_sample(size=(batch_size, opt.n_classes))))
             gen_imgs = generator(z, gen_labels)
             # Loss measures generator's ability to fool the discriminator
             validity = discriminator(gen_imgs, gen_labels)
             g_loss = -torch.mean(validity)
-
             g_loss.backward()
             optimizer_G.step()
 
