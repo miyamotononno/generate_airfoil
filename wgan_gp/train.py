@@ -15,7 +15,7 @@ from util import save_loss, to_cpu, save_coords, to_cuda
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=40000, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=60000, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0001, help="adam: learning rate") # 1e-4
 parser.add_argument("--b1", type=float, default=0, help="adam: decay of first order momentum of gradient") # 0.0
@@ -32,13 +32,21 @@ opt = parser.parse_args()
 coord_shape = (opt.channels, opt.coord_size)
 
 cuda = True if torch.cuda.is_available() else False
-
-# Loss weight for gradient penalty
 lambda_gp = 10
-
-# Initialize generator and discriminator
-generator = Generator(opt.latent_dim)
-discriminator = Discriminator()
+# Loss weight for gradient penalty
+done_epoch = 40000
+if done_epoch>0:
+    G_PATH = "results/generator_params_{0}".format(done_epoch)
+    D_PATH = "results/discriminator_params_{0}".format(done_epoch)
+    generator = Generator(opt.latent_dim)
+    generator.load_state_dict(torch.load(G_PATH, map_location=torch.device('cpu')))
+    generator.eval()
+    discriminator = Discriminator()
+    discriminator.load_state_dict(torch.load(D_PATH, map_location=torch.device('cpu')))
+    discriminator.eval()
+else:
+    generator = Generator(opt.latent_dim)
+    discriminator = Discriminator()
 
 if cuda:
     print("use GPU")
@@ -111,6 +119,7 @@ start = time.time()
 D_losses, G_losses = [], []
 batches_done = 0
 for epoch in range(opt.n_epochs):
+    epoch+=done_epoch
     for i, (coords, labels) in enumerate(dataloader):
         batch_size = coords.shape[0]
         coords = coords.reshape(batch_size, *coord_shape)
@@ -179,9 +188,7 @@ for epoch in range(opt.n_epochs):
             torch.save(generator.state_dict(), "results/generator_params_{0}".format(epoch))
             torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(epoch))
 
-torch.save(generator.state_dict(), "results/generator_params_{0}".format(opt.n_epochs))
-torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(opt.n_epochs))
+torch.save(generator.state_dict(), "results/generator_params_{0}".format(opt.n_epochs+done_epoch))
+torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(opt.n_epochs+done_epoch))
 sample_image(data_num=100)
 save_loss(G_losses, D_losses, path="results/loss.png")
-
-
