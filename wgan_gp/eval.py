@@ -30,7 +30,7 @@ def create_label(data_num, fixed_cl=None):
   labels = Variable(torch.reshape(FloatTensor([labels]), (data_num, 1)))
   return labels
 
-cl_c = 0.6
+cl_c = 1.5
 
 def sample_image(data_num=12):
     # Sample noise
