@@ -30,7 +30,7 @@ def create_label(data_num, fixed_cl=None):
   labels = Variable(torch.reshape(FloatTensor([labels]), (data_num, 1)))
   return labels
 
-cl_c = 1.5
+cl_c = 0.0
 
 def sample_image(data_num=12):
     # Sample noise
@@ -44,7 +44,7 @@ def sample_image(data_num=12):
     save_coords_by_cl(gen_coords*coord_std+coord_mean, cl_c, "coords/eval.png")
 
 
-G_PATH = "results/generator_params_40000" 
+G_PATH = "results/generator_params_100000" 
 G = Generator(latent_dim)
 G.load_state_dict(torch.load(G_PATH, map_location=torch.device('cpu')))
 G.eval()
