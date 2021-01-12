@@ -15,7 +15,7 @@ from util import save_loss, to_cpu, save_coords, to_cuda
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=60000, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=40000, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0001, help="adam: learning rate") # 1e-4
 parser.add_argument("--b1", type=float, default=0, help="adam: decay of first order momentum of gradient") # 0.0
@@ -34,7 +34,7 @@ coord_shape = (opt.channels, opt.coord_size)
 cuda = True if torch.cuda.is_available() else False
 lambda_gp = 10
 # Loss weight for gradient penalty
-done_epoch = 40000
+done_epoch = 0
 if done_epoch>0:
     G_PATH = "results/generator_params_{0}".format(done_epoch)
     D_PATH = "results/discriminator_params_{0}".format(done_epoch)
@@ -54,8 +54,8 @@ if cuda:
     discriminator.cuda()
 
 # Configure data loader
-perfs_npz = np.load("../dataset/standardized_perfs.npz")
-coords_npz = np.load("../dataset/standardized_coords.npz")
+perfs_npz = np.load("../dataset/standardized_upsampling_perfs.npz")
+coords_npz = np.load("../dataset/standardized_upsampling_coords.npz")
 coords = coords_npz[coords_npz.files[0]]
 coord_mean = coords_npz[coords_npz.files[1]]
 coord_std = coords_npz[coords_npz.files[2]]
@@ -63,7 +63,7 @@ perfs = perfs_npz[perfs_npz.files[0]]
 perf_mean = perfs_npz[perfs_npz.files[1]]
 perf_std = perfs_npz[perfs_npz.files[2]]
 
-max_cl = 1.551
+max_cl = 1.58
 
 dataset = torch.utils.data.TensorDataset(torch.tensor(coords), torch.tensor(perfs))
 dataloader = torch.utils.data.DataLoader(
