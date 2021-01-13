@@ -37,11 +37,19 @@ class Eval:
 
   def create_successive_coords(self):
     """0.01から1.50まで151個のC_L^cと翼形状を生成"""
-    labels = np.array([cl_c/100 for cl_c in range(151)])
-    labels = Variable(torch.reshape(FloatTensor([labels]), (151, 1)))
-    z = Variable(FloatTensor(np.random.normal(0, 1, (151, self.latent_dim))))
-    gen_coords = self.rev_standardize(to_cpu(self.G(z, labels)).detach().numpy())
-    return labels, gen_coords
+    cl_r = []
+    for cl_c in range(151):
+      cl_c /= 100
+      labels = Variable(torch.reshape(FloatTensor([cl_c]), (1, 1)))
+      while (True):
+        z = Variable(FloatTensor(np.random.normal(0, 1, (1, self.latent_dim))))
+        gen_coord = self.rev_standardize(to_cpu(self.G(z, labels)).detach().numpy())
+        cl = get_cl(gen_coord)
+        if not np.isnan(cl):
+          cl_r.append(cl)
+          break
+
+    return cl_c, cl_r, gen_coords
 
   def save_coords(self, gen_coords, labels, path):
     data_size = gen_coords.shape[0]
@@ -57,24 +65,15 @@ class Eval:
         ax[i%4, i//4].set_title(title)
 
     fig.savefig(path)
-
-  def get_cl_r(self, coords):
-    cl_r = []
-    for coord in range(coords):
-      cl = get_cl(coord)
-      cl_r.append(cl)
-
-    return np.array(cl_r)
     
     
 if __name__ == "__main__":
   coords_npz = np.load("../dataset/standardized_coords.npz")
   G_PATH = "results/generator_params_100000"
   evl = Eval(G_PATH, coords_npz)
-  labels, gen_coords = evl.create_successive_coords()
-  cl_r = evl.get_cl_r(gen_coords)
+  cl_c, cl_r, gen_coords = evl.create_successive_coords()
   fig = plt.figure(figsize=(10,5))
-  plt.plot(labels, cl_r)
+  plt.plot(cl_c, cl_r)
   plt.xlabel("Specified label")
   plt.ylabel("Recalculated label")
   fig.savefig("successive_label.png")
