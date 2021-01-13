@@ -8,19 +8,19 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import torch.autograd as autograd
 import statistics
 from models import Generator, Discriminator
 from util import save_loss, to_cpu, save_coords, to_cuda
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=400, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=500000, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
-parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
-parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
-parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
-parser.add_argument("--n_cpu", type=int, default=8, help="number of cpu threads to use during batch generation")
-parser.add_argument("--latent_dim", type=int, default=49, help="dimensionality of the latent space")
+parser.add_argument("--lr", type=float, default=0.00001, help="adam: learning rate")
+parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient") # 0.0
+parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient") # 0.9
+parser.add_argument("--latent_dim", type=int, default=3, help="dimensionality of the latent space")
 parser.add_argument("--n_classes", type=int, default=1, help="number of classes for dataset")
 parser.add_argument("--coord_size", type=int, default=496, help="size of each image dimension")
 parser.add_argument("--channels", type=int, default=1, help="number of image channels")
@@ -30,28 +30,38 @@ opt = parser.parse_args()
 coord_shape = (opt.channels, opt.coord_size)
 
 cuda = True if torch.cuda.is_available() else False
-
-# Loss functions
-adversarial_loss = torch.nn.BCELoss()
-
-# Initialize generator and discriminator
-generator = Generator(opt.latent_dim)
-discriminator = Discriminator()
+# Loss weight for gradient penalty
+done_epoch = 0
+if done_epoch>0:
+    G_PATH = "results/generator_params_{0}".format(done_epoch)
+    D_PATH = "results/discriminator_params_{0}".format(done_epoch)
+    generator = Generator(opt.latent_dim)
+    generator.load_state_dict(torch.load(G_PATH, map_location=torch.device('cpu')))
+    generator.eval()
+    discriminator = Discriminator()
+    discriminator.load_state_dict(torch.load(D_PATH, map_location=torch.device('cpu')))
+    discriminator.eval()
+else:
+    generator = Generator(opt.latent_dim)
+    discriminator = Discriminator()
 
 if cuda:
+    print("use GPU")
     generator.cuda()
     discriminator.cuda()
-    adversarial_loss.cuda()
 
 # Configure data loader
-perfs_npz = np.load("./dataset/standardized_perfs.npz")
-coords_npz = np.load("./dataset/standardized_coords.npz")
+perfs_npz = np.load("../dataset/standardized_perfs.npz")
+coords_npz = np.load("../dataset/standardized_coords.npz")
 coords = coords_npz[coords_npz.files[0]]
 coord_mean = coords_npz[coords_npz.files[1]]
 coord_std = coords_npz[coords_npz.files[2]]
 perfs = perfs_npz[perfs_npz.files[0]]
-perf_mean = perfs_npz[perfs_npz.files[1]]
-perf_std = perfs_npz[perfs_npz.files[2]]
+
+max_cl = 1.551
+
+# Loss functions
+adversarial_loss = torch.nn.BCELoss()
 
 dataset = torch.utils.data.TensorDataset(torch.tensor(coords), torch.tensor(perfs))
 dataloader = torch.utils.data.DataLoader(
@@ -66,25 +76,12 @@ optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=opt.lr, betas=(opt
 
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
-
-def sample_image(epoch=None, data_num=6):
-    # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, opt.latent_dim))))
-    # Get labels ranging from 0 to n_classes for n rows
-    labels = np.random.normal(loc=perf_mean, scale=perf_std, size=data_num)
-    labels = Variable(torch.reshape(FloatTensor([labels]), (data_num, opt.n_classes)))
-    gen_coords = to_cpu(generator(z, labels)).detach().numpy()
-    labels = to_cpu(labels).detach().numpy()
-    if epoch is not None:
-        save_coords(gen_coords*coord_std+coord_mean, labels, "generate_coord/epoch_{0}".format(str(epoch).zfill(3)))
-    else:
-        np.savez("result/final", labels, gen_coords*coord_std+coord_mean)
-
 # ----------
 #  Training
 # ----------
 start = time.time()
 D_losses, G_losses = [], []
+max_cl = 1.58
 for epoch in range(opt.n_epochs):
     for i, (coords, labels) in enumerate(dataloader):
         batch_size = coords.shape[0]
@@ -106,7 +103,7 @@ for epoch in range(opt.n_epochs):
         # Sample noise and labels as generator input
         z = Variable(FloatTensor(np.random.normal(0, 1, (batch_size, opt.latent_dim))))
 
-        gen_labels = Variable(FloatTensor(np.random.normal(loc=perf_mean, scale=perf_std, size=(batch_size, opt.n_classes))))
+        gen_labels = Variable(FloatTensor(max_cl*np.random.random_sample(size=(batch_size, opt.n_classes))))
         # Generate a batch of images
         gen_imgs = generator(z, gen_labels)
         # Loss measures generator's ability to fool the discriminator
@@ -145,8 +142,6 @@ for epoch in range(opt.n_epochs):
     D_losses.append(d_loss.item())
     G_losses.append(g_loss.item())
 
-    if (epoch+1)%20==0:
-        sample_image(epoch=epoch+1)
-
-sample_image(data_num=100)
-save_loss(G_losses, D_losses)
+end = time.time()
+print((end-start)/60)
+np.savez("result/loss.npz", np.array(D_losses), np.array(G_losses))
