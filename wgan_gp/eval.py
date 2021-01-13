@@ -1,51 +1,80 @@
 import argparse
 import numpy as np
 from torch.autograd import Variable
-
-import torch.nn as nn
 import torch
-from models import Generator, Discriminator
-from util import save_loss, to_cpu, save_coords, to_cuda, save_coords_by_cl
+import torch.nn as nn
+
+from models import Generator
+import matplotlib.pyplot as plt
+from calc_cl import get_cl
+from util import save_loss, to_cpu, to_cuda
 
 cuda = True if torch.cuda.is_available() else False
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
-perfs_npz = np.load("../dataset/standardized_perfs.npz")
-coords_npz = np.load("../dataset/standardized_coords.npz")
-coords = coords_npz[coords_npz.files[0]]
-coord_mean = coords_npz[coords_npz.files[1]]
-coord_std = coords_npz[coords_npz.files[2]]
-perfs = perfs_npz[perfs_npz.files[0]]
-perf_mean = perfs_npz[perfs_npz.files[1]]
-perf_std = perfs_npz[perfs_npz.files[2]]
+class Eval:
+  def __init__(self, G_PATH, coords_npz):
+    state_dict = torch.load(G_PATH, map_location=torch.device('cpu'))
+    self.G = Generator(3)
+    self.G.load_state_dict(state_dict)
+    self.G.eval()
+    self.latent_dim = 3
+    self.coords = {
+      'data': coords_npz[coords_npz.files[0]],
+      'mean':coords_npz[coords_npz.files[1]],
+      'std':coords_npz[coords_npz.files[2]],
+    }
 
-latent_dim = 3
+  def rev_standardize(self, coords):
+    return coords*self.coords['std']+self.coords['mean']
 
-def create_label(data_num, fixed_cl=None):
-  if fixed_cl is None:
-    labels = np.random.normal(loc=perf_mean, scale=perf_std, size=data_num)
-  else:
-    labels = np.array([fixed_cl]*data_num)
+  def create_coords_by_cl(self, cl_c, data_num=20):
+    z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, self.latent_dim))))
+    labels = np.array([cl_c]*data_num)
+    labels = Variable(torch.reshape(FloatTensor([labels]), (data_num, 1)))
+    gen_coords = self.rev_standardize(to_cpu(self.G(z, labels)).detach().numpy())
+    return labels, gen_coords
 
-  labels = Variable(torch.reshape(FloatTensor([labels]), (data_num, 1)))
-  return labels
+  def create_successive_coords(self):
+    """0.01から1.50まで151個のC_L^cと翼形状を生成"""
+    labels = np.array([cl_c/100 for cl_c in range(151)])
+    labels = Variable(torch.reshape(FloatTensor([labels]), (151, 1)))
+    z = Variable(FloatTensor(np.random.normal(0, 1, (151, self.latent_dim))))
+    gen_coords = self.rev_standardize(to_cpu(self.G(z, labels)).detach().numpy())
+    return labels, gen_coords
 
-cl_c = 1.5
+  def save_coords(self, gen_coords, labels, path):
+    data_size = gen_coords.shape[0]
+    fig, ax = plt.subplots(4,min(5, data_size//4), sharex=True, sharey=True)
+    plt.subplots_adjust(hspace=0.6)
+    for i in range(min(20, data_size)):
+        coord = gen_coords[i]
+        label = labels[i]
+        x,y = coord.reshape(2, -1)
+        ax[i%4, i//4].plot(x,y)
+        cl = round(label.item(), 4)
+        title = 'CL={0}'.format(str(cl))
+        ax[i%4, i//4].set_title(title)
 
-def sample_image(data_num=12):
-    # Sample noise
-    z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, latent_dim))))
-    # Get labels ranging from 0 to n_classes for n rows
-    labels = create_label(data_num, cl_c)
-    gen_coords = to_cpu(G(z, labels)).detach().numpy()
-    labels = to_cpu(labels).detach().numpy()
-    # np.savez("results/eval", labels, gen_coords*coord_std+coord_mean)
-    # save_coords(gen_coords*coord_std+coord_mean, labels, "coords/eval.png")
-    save_coords_by_cl(gen_coords*coord_std+coord_mean, cl_c, "coords/eval.png")
+    fig.savefig(path)
 
+  def get_cl_r(self, coords):
+    cl_r = []
+    for coord in range(coords):
+      cl = get_cl(coord)
+      cl_r.append(cl)
 
-G_PATH = "results/generator_params_40000" 
-G = Generator(latent_dim)
-G.load_state_dict(torch.load(G_PATH, map_location=torch.device('cpu')))
-G.eval()
-sample_image(data_num=20)
+    return np.array(cl_r)
+    
+    
+if __name__ == "__main__":
+  coords_npz = np.load("../dataset/standardized_coords.npz")
+  G_PATH = "results/generator_params_100000"
+  evl = Eval(G_PATH, coords_npz)
+  labels, gen_coords = evl.create_successive_coords()
+  cl_r = evl.get_cl_r(gen_coords)
+  fig = plt.figure(figsize=(10,5))
+  plt.plot(labels, cl_r)
+  plt.xlabel("Specified label")
+  plt.ylabel("Recalculated label")
+  fig.savefig("successive_label.png")
