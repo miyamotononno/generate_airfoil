@@ -38,18 +38,21 @@ class Eval:
   def create_successive_coords(self):
     """0.01から1.50まで151個のC_L^cと翼形状を生成"""
     cl_r = []
-    for cl_c in range(151):
-      cl_c /= 100
-      labels = Variable(torch.reshape(FloatTensor([cl_c]), (1, 1)))
+    cl_c = []
+    for cl in range(151):
+      cl /= 100
+      cl_c.append(cl)
+      labels = Variable(torch.reshape(FloatTensor([cl]), (1, 1)))
       while (True):
         z = Variable(FloatTensor(np.random.normal(0, 1, (1, self.latent_dim))))
         gen_coord = self.rev_standardize(to_cpu(self.G(z, labels)).detach().numpy())
         cl = get_cl(gen_coord)
+        # cl = 0.1
         if not np.isnan(cl):
           cl_r.append(cl)
           break
 
-    return cl_c, cl_r, gen_coords
+    return cl_c, cl_r, gen_coord
 
   def save_coords(self, gen_coords, labels, path):
     data_size = gen_coords.shape[0]
@@ -73,7 +76,12 @@ if __name__ == "__main__":
   evl = Eval(G_PATH, coords_npz)
   cl_c, cl_r, gen_coords = evl.create_successive_coords()
   fig = plt.figure(figsize=(10,5))
-  plt.plot(cl_c, cl_r)
-  plt.xlabel("Specified label")
-  plt.ylabel("Recalculated label")
-  fig.savefig("successive_label.png")
+  ax = fig.add_subplot(111)
+  ax.set_xlim([0, 1.6])
+  x = np.linspace(0, 1.5, 10)
+  ax.plot(x, x, color = "black")
+  ax.plot(cl_c, cl_r)
+  ax.set_xlabel("Specified label")
+  ax.set_ylabel("Recalculated label")
+  # plt.show()
+  fig.savefig("results/successive_label.png")
