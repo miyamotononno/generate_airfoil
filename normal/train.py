@@ -15,7 +15,7 @@ from util import save_loss, to_cpu, save_coords, to_cuda
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=500000, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=100000, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.00001, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient") # 0.0
@@ -57,8 +57,6 @@ coords = coords_npz[coords_npz.files[0]]
 coord_mean = coords_npz[coords_npz.files[1]]
 coord_std = coords_npz[coords_npz.files[2]]
 perfs = perfs_npz[perfs_npz.files[0]]
-
-max_cl = 1.551
 
 # Loss functions
 adversarial_loss = torch.nn.BCELoss()
@@ -144,4 +142,4 @@ for epoch in range(opt.n_epochs):
 
 end = time.time()
 print((end-start)/60)
-np.savez("result/loss.npz", np.array(D_losses), np.array(G_losses))
+np.savez("results/loss.npz", np.array(D_losses), np.array(G_losses))
