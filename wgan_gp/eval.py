@@ -72,7 +72,7 @@ class Eval:
     fig.savefig(path)
 
   def successive(self):
-    coords_npz = np.load("results/successive_label.png")
+    coords_npz = np.load("results/successive_label.npz")
     cl_c = coords_npz[coords_npz.files[0]]
     cl_r = coords_npz[coords_npz.files[1]]
     fig = plt.figure(figsize=(10,5))
