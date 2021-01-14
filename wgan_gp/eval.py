@@ -7,7 +7,7 @@ import torch.nn as nn
 from models import Generator
 import matplotlib.pyplot as plt
 from calc_cl import get_cl
-from util import to_cpu, to_cuda, save_coords_by_cl
+from util import to_cpu, to_cuda, save_coords_by_cl, 
 
 cuda = True if torch.cuda.is_available() else False
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
@@ -85,15 +85,23 @@ class Eval:
     ax.set_ylabel("Recalculated label")
     # plt.show()
     fig.savefig("results/successive_label.png")
+
+  def sample_data(self, data_num=100):
+    z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, 3))))
+    labels = 1.558*np.random.random_sample(size=(data_num, 1))
+    labels = Variable(FloatTensor(labels))
+    gen_coords = to_cpu(self.G(z, labels)).detach().numpy()
+    labels = to_cpu(labels).detach().numpy()
+    np.savez("results/final", labels, rev_standardize(gen_coords))
     
     
 if __name__ == "__main__":
   coords_npz = np.load("../dataset/standardized_upsampling_coords.npz")
   G_PATH = "results/generator_params_100000"
   evl = Eval(G_PATH, coords_npz)
-  cl = [0.0,0.5,1.0,1.5]
-  for cl_c in cl:
-    coords = evl.create_coords_by_cl(cl_c)
-    save_coords_by_cl(coords, str(cl_c), "eval_{0}.png".format(str(cl_c)))
-  evl.create_successive_coords()
+  # cl = [0.0,0.5,1.0,1.5]
+  # for cl_c in cl:
+  #   coords = evl.create_coords_by_cl(cl_c)
+  #   save_coords_by_cl(coords, str(cl_c), "eval_{0}.png".format(str(cl_c)))
+  # evl.create_successive_coords()
   evl.successive()
