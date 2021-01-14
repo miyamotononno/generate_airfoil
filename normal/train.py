@@ -139,7 +139,12 @@ for epoch in range(opt.n_epochs):
         
     D_losses.append(d_loss.item())
     G_losses.append(g_loss.item())
+    if epoch % 5000 == 0:
+            torch.save(generator.state_dict(), "results/generator_params_{0}".format(epoch))
+            torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(epoch))
 
+torch.save(generator.state_dict(), "results/generator_params_{0}".format(opt.n_epochs+done_epoch))
+torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(opt.n_epochs+done_epoch)) 
 end = time.time()
 print((end-start)/60)
 np.savez("results/loss.npz", np.array(D_losses), np.array(G_losses))
