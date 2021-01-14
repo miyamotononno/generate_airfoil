@@ -56,8 +56,8 @@ def save_coords(gen_coords, labels, path):
         title = 'CL={0}'.format(str(cl))
         ax[i%4, i//4].set_title(title)
     
-    plt.show()
-    # fig.savefig(path)
+    # plt.show()
+    fig.savefig(path)
 
 def save_loss(G_losses, D_losses, path="results/loss.png"):
     fig = plt.figure(figsize=(10,5))
