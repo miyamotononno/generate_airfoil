@@ -44,13 +44,21 @@ class Eval:
       cl /= 100
       cl_c.append(cl)
       labels = Variable(torch.reshape(FloatTensor([cl]), (1, 1)))
+      calc_num = 0
       while (True):
+        calc_num += 1
         z = Variable(FloatTensor(np.random.normal(0, 1, (1, self.latent_dim))))
         gen_coord = self.rev_standardize(to_cpu(self.G(z, labels)).detach().numpy())
-        cl = get_cl(gen_coord)
+        clr = get_cl(gen_coord)
         # cl = 0.1
-        if not np.isnan(cl):
-          cl_r.append(cl)
+        if not np.isnan(clr):
+          print(cl)
+          cl_r.append(clr)
+          gen_coords.append(gen_coord)
+          break
+        if calc_num == 5:
+          print('not calculated {0}'.format(cl))
+          cl_r.append(-1)
           gen_coords.append(gen_coord)
           break
 
@@ -96,12 +104,12 @@ class Eval:
     
     
 if __name__ == "__main__":
-  coords_npz = np.load("../dataset/standardized_upsampling_coords.npz")
+  coords_npz = np.load("../dataset/standardized_coords.npz")
   G_PATH = "results/generator_params_50000"
   evl = Eval(G_PATH, coords_npz)
-  # cl = [0.0,0.5,1.0,1.5]
-  # for cl_c in cl:
-  #   coords = evl.create_coords_by_cl(cl_c)
-  #   save_coords_by_cl(coords, str(cl_c), "eval_{0}.png".format(str(cl_c)))
-  # evl.create_successive_coords()
-  evl.sample_data()
+  cl = [0.0,0.5,1.0,1.5]
+  for cl_c in cl:
+    coords = evl.create_coords_by_cl(cl_c)
+    save_coords_by_cl(coords, str(cl_c), "eval_{0}.png".format(str(cl_c)))
+  evl.create_successive_coords()
+  evl.successive()
