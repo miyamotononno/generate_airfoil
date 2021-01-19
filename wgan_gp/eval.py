@@ -94,6 +94,36 @@ class Eval:
     labels = to_cpu(labels).detach().numpy()
     np.savez("results/final", labels, rev_standardize(gen_coords))
     
+  def euclid_dist(self, coords):
+    """バリエーションがどれぐらいあるか"""
+    mean = np.mean(coords, axis=0)
+    mu_d = np.linalg.norm(coords - mean)/len(coords)
+    return mu_d
+
+  def _dist_from_dataset(self, coord):
+    """データセットからの距離の最小値"""
+    min_dist = 100
+    idx = -1
+    for i, data in enumerate(self.rev_standardize(self.coords['data'])):
+      dist = np.linalg.norm(coord - data)
+      if dist < min_dist:
+        min_dist = dist
+        idx = i
+    
+    return min_dist, idx
+    
+  def calc_dist_from_dataset(self, coords, clr):
+    data_idx = -1
+    generate_idx = -1
+    for i, c in enumerate(coords):
+      cl = clr[i]
+      if not np.isnan(cl):
+        dist, didx = self._dist_from_dataset(c)
+        if dist > c:
+          max_dist = dist
+          data_idx = didx
+          generate_idx = i
+    return max_dist, data_idx, generate_idx
     
 if __name__ == "__main__":
   coords_npz = np.load("../dataset/standardized_upsampling_coords.npz")

@@ -83,12 +83,25 @@ class Eval:
     coords_npz = np.load("results/successive_label.npz")
     cl_c = coords_npz[coords_npz.files[0]]
     cl_r = coords_npz[coords_npz.files[1]]
+    success_clc = []
+    success_clr = []
+    fail_clc = []
+    fail_clr = []
+    for c, r in zip(cl_c, cl_r):
+      if r == -1:
+        fail_clc.append(c)
+        fail_clr.append(0)
+        continue
+      success_clc.append(c)
+      success_clr.append(r)
+
     fig = plt.figure(figsize=(10,5))
     ax = fig.add_subplot(111)
     ax.set_xlim([0, 1.5])
     x = np.linspace(0, 1.5, 10)
     ax.plot(x, x, color = "black")
-    ax.scatter(cl_c, cl_r)
+    ax.scatter(success_clc, success_clr)
+    ax.scatter(fail_clc, fail_clr, color='red')
     ax.set_xlabel("Specified label")
     ax.set_ylabel("Recalculated label")
     # plt.show()
@@ -101,15 +114,45 @@ class Eval:
     gen_coords = to_cpu(self.G(z, labels)).detach().numpy()
     labels = to_cpu(labels).detach().numpy()
     np.savez("results/final", labels,self.rev_standardize(gen_coords))
+
+  def euclid_dist(self, coords):
+    """バリエーションがどれぐらいあるか"""
+    mean = np.mean(coords, axis=0)
+    mu_d = np.linalg.norm(coords - mean)/len(coords)
+    return mu_d
+
+  def _dist_from_dataset(self, coord):
+    """データセットからの距離の最小値"""
+    min_dist = 100
+    idx = -1
+    for i, data in enumerate(self.rev_standardize(self.coords['data'])):
+      dist = np.linalg.norm(coord - data)
+      if dist < min_dist:
+        min_dist = dist
+        idx = i
     
+    return min_dist, idx
     
+  def calc_dist_from_dataset(self, coords, clr):
+    data_idx = -1
+    generate_idx = -1
+    for i, c in enumerate(coords):
+      cl = clr[i]
+      if not np.isnan(cl):
+        dist, didx = self._dist_from_dataset(c)
+        if dist > c:
+          max_dist = dist
+          data_idx = didx
+          generate_idx = i
+    return max_dist, data_idx, generate_idx
+
 if __name__ == "__main__":
   coords_npz = np.load("../dataset/standardized_coords.npz")
   G_PATH = "results/generator_params_50000"
   evl = Eval(G_PATH, coords_npz)
-  cl = [0.0,0.5,1.0,1.5]
-  for cl_c in cl:
-    coords = evl.create_coords_by_cl(cl_c)
-    save_coords_by_cl(coords, str(cl_c), "eval_{0}.png".format(str(cl_c)))
-  evl.create_successive_coords()
-  evl.successive()
+  # cl = [0.0,0.5,1.0,1.5]
+  # for cl_c in cl:
+  #   coords = evl.create_coords_by_cl(cl_c)
+  #   save_coords_by_cl(coords, str(cl_c), "eval_{0}.png".format(str(cl_c)))
+  # evl.create_successive_coords()
+  # evl.successive()
