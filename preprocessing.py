@@ -16,7 +16,7 @@ for i, (p, co) in enumerate(zip(perf, coord)):
   cl = p[0]
   # cd = p[1]
   ok = p[6]
-  if ok == 1 and cl < 2.0:
+  if ok == 1 and cl < 1.6:
     fd.append(four_digit)
     perfs.append(cl)
     coords.append(co.reshape(-1))
@@ -32,5 +32,5 @@ for i, (p, co) in enumerate(zip(perf, coord)):
 # coords = np.array(coords)
 # print(coords.shape)
 
-# np.save('./dataset/perfs.npy', perfs)
-# np.save('./dataset/coords.npy', coords)
+np.save('./dataset/perfs.npy', perfs)
+np.save('./dataset/coords.npy', coords)
