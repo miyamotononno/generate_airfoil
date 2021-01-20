@@ -131,8 +131,8 @@ if __name__ == "__main__":
   perfs = np.load("../dataset/upsampling_perfs.npy")
   G_PATH = "results/generator_params_100000"
   evl = Eval(G_PATH, coords_npz)
-  cl = [0.789, 0.684]
-  cl_c = 0.789
+  # cl = [0.789, 0.684]
+  cl_c = 0.684
   coords = evl.create_coords_by_cl(cl_c)
   coords = coords.reshape(coords.shape[0], -1)
   clr = get_cls(coords)
@@ -144,6 +144,6 @@ if __name__ == "__main__":
   g_cl = clr[g_idx]
   print(cl_c, d_cl, g_cl)
   cls = np.array([cl_c, d_cl, g_cl])
-  np.savez("dist_{0}".format(cl_c), d_coord, g_coord, cls)
+  np.savez("dist_{0}".format(cl_c), d_coord, g_coord, cls, max_dist)
   # evl.create_successive_coords()
   # evl.successive()
