@@ -17,6 +17,16 @@ def get_cl(coord, xf=None, angle=5):
   cl= c[0]
   return cl
 
+def get_cls(coords):
+  xf = XFoil()
+  xf.print = False
+  cl_s = []
+  for coord in coords:
+    cl = get_cl(coord, xf)
+    cl_s.append(cl)
+  
+  return np.array(cl_s)
+
 if __name__ == "__main__":    
   use_dataset = False
 

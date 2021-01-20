@@ -6,7 +6,7 @@ import torch.nn as nn
 
 from models import Generator
 import matplotlib.pyplot as plt
-from calc_cl import get_cl
+from calc_cl import get_cl, get_cls
 from util import to_cpu, to_cuda, save_coords_by_cl 
 
 cuda = True if torch.cuda.is_available() else False
@@ -148,11 +148,19 @@ class Eval:
 
 if __name__ == "__main__":
   coords_npz = np.load("../dataset/standardized_coords.npz")
+  perfs = np.load("../dataset/perfs.npy")
   G_PATH = "results/generator_params_50000"
   evl = Eval(G_PATH, coords_npz)
-  # cl = [0.0,0.5,1.0,1.5]
-  # for cl_c in cl:
-  #   coords = evl.create_coords_by_cl(cl_c)
-  #   save_coords_by_cl(coords, str(cl_c), "eval_{0}.png".format(str(cl_c)))
-  # evl.create_successive_coords()
-  # evl.successive()
+  cl_c = 0.684
+  coords = evl.create_coords_by_cl(cl_c)
+  coords = coords.reshape(coords.shape[0], -1)
+  clr = get_cls(coords)
+  max_dist, d_idx, g_idx = evl.calc_dist_from_dataset(coords, clr)
+  print(max_dist)
+  d_coord = evl.rev_standardize(evl.coords['data'][d_idx])
+  d_cl = perfs[d_idx]
+  g_coord = coords[g_idx]
+  g_cl = clr[g_idx]
+  print(cl_c, d_cl, g_cl)
+  cls = np.array([cl_c, d_cl, g_cl])
+  np.savez("dist_{0}".format(cl_c), d_coord, g_coord, cls, max_dist)

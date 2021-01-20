@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 coords = np.load("./dataset/upsampling_coords.npy")
-perfs = np.load("./dataset/upsampling_perfs.npy")
+perfs = np.load("./dataset/perfs.npy")
 
 def standardize(coords, path):
   mean_coord = np.mean(coords, axis=0).reshape(-1)
@@ -26,7 +26,8 @@ def standardize(coords, path):
   np.savez('./dataset/{0}'.format(path), coords=new_coords, mean=mean_coord.reshape(1, -1), std=std_coord.reshape(1, -1))
 
 if __name__ == "__main__":
-  standardize(coords, "standardized_upsampling_coords.npz")
+  # standardize(coords, "standardized_upsampling_coords.npz")
   mean_perf = np.mean(perfs, axis=0)
-  std_perf = np.std(perfs, axis=0)
-  np.savez('./dataset/{0}'.format('standardized_upsampling_perfs.npz'), perfs=perfs, mean=mean_perf, std=std_perf)
+  print(mean_perf)
+  # std_perf = np.std(perfs, axis=0)
+  # np.savez('./dataset/{0}'.format('standardized_upsampling_perfs.npz'), perfs=perfs, mean=mean_perf, std=std_perf)
