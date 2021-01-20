@@ -136,11 +136,12 @@ class Eval:
   def calc_dist_from_dataset(self, coords, clr):
     data_idx = -1
     generate_idx = -1
+    max_dist = 0
     for i, c in enumerate(coords):
       cl = clr[i]
       if not np.isnan(cl):
         dist, didx = self._dist_from_dataset(c)
-        if dist > c:
+        if dist > max_dist:
           max_dist = dist
           data_idx = didx
           generate_idx = i
