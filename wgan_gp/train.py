@@ -1,3 +1,7 @@
+if '__file__' in globals():
+  import os, sys
+  sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,7 +14,7 @@ import torch.nn.functional as F
 import torch
 import torch.autograd as autograd
 import statistics
-from models import Generator, Discriminator
+from wgan_gp.models import Generator, Discriminator
 from util import save_loss, to_cpu, save_coords, to_cuda
 
 
@@ -34,10 +38,10 @@ coord_shape = (opt.channels, opt.coord_size)
 cuda = True if torch.cuda.is_available() else False
 lambda_gp = 10
 # Loss weight for gradient penalty
-done_epoch = 90000
+done_epoch = 50000
 if done_epoch>0:
-    G_PATH = "results/generator_params_{0}".format(done_epoch)
-    D_PATH = "results/discriminator_params_{0}".format(done_epoch)
+    G_PATH = "wgan_gp/results/generator_params_{0}".format(done_epoch)
+    D_PATH = "wgan_gp/results/discriminator_params_{0}".format(done_epoch)
     generator = Generator(opt.latent_dim)
     generator.load_state_dict(torch.load(G_PATH, map_location=torch.device('cpu')))
     generator.eval()
@@ -54,8 +58,8 @@ if cuda:
     discriminator.cuda()
 
 # Configure data loader
-perfs_npz = np.load("../dataset/standardized_upsampling_perfs.npz")
-coords_npz = np.load("../dataset/standardized_upsampling_coords.npz")
+perfs_npz = np.load("dataset/standardized_upsampling_perfs.npz")
+coords_npz = np.load("dataset/standardized_upsampling_coords.npz")
 coords = coords_npz[coords_npz.files[0]]
 coord_mean = coords_npz[coords_npz.files[1]]
 coord_std = coords_npz[coords_npz.files[2]]
@@ -86,10 +90,10 @@ def sample_image(epoch=None, data_num=12):
     gen_coords = to_cpu(generator(z, labels)).detach().numpy()
     labels = to_cpu(labels).detach().numpy()
     if epoch is not None:
-        save_coords(gen_coords*coord_std+coord_mean, labels, "coords/epoch_{0}".format(str(epoch).zfill(3)))
+        save_coords(gen_coords*coord_std+coord_mean, labels, "wgan_gp/coords/epoch_{0}".format(str(epoch).zfill(3)))
     else:
-        np.savez("results/final", labels, gen_coords*coord_std+coord_mean)
-        save_coords(gen_coords*coord_std+coord_mean, labels, "coords/final.png")
+        np.savez("wgan_gp/results/final", labels, gen_coords*coord_std+coord_mean)
+        save_coords(gen_coords*coord_std+coord_mean, labels, "wgan_gp/coords/final.png")
 
 def compute_gradient_penalty(D, real_samples, fake_samples, labels):
     """Calculates the gradient penalty loss for WGAN GP"""
@@ -185,10 +189,10 @@ for epoch in range(opt.n_epochs):
 
             batches_done += opt.n_critic
         if epoch % 5000 == 0:
-            torch.save(generator.state_dict(), "results/generator_params_{0}".format(epoch))
-            torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(epoch))
+            torch.save(generator.state_dict(), "wgan_gp/results/generator_params_{0}".format(epoch))
+            torch.save(discriminator.state_dict(), "wgan_gp/results/discriminator_params_{0}".format(epoch))
 
-torch.save(generator.state_dict(), "results/generator_params_{0}".format(opt.n_epochs+done_epoch))
-torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(opt.n_epochs+done_epoch))
+torch.save(generator.state_dict(), "wgan_gp/results/generator_params_{0}".format(opt.n_epochs+done_epoch))
+torch.save(discriminator.state_dict(), "wgan_gp/results/discriminator_params_{0}".format(opt.n_epochs+done_epoch))
 sample_image(data_num=100)
-save_loss(G_losses, D_losses, path="results/loss.png")
+save_loss(G_losses, D_losses, path="wgan_gp/results/loss.png")

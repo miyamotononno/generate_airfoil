@@ -1,10 +1,14 @@
+if '__file__' in globals():
+  import os, sys
+  sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import argparse
 import numpy as np
 from torch.autograd import Variable
 import torch
 import torch.nn as nn
 
-from models import Generator
+from normal.models import Generator
 import matplotlib.pyplot as plt
 from calc_cl import get_cl, get_cls
 from util import to_cpu, to_cuda, save_coords_by_cl 
@@ -62,7 +66,7 @@ class Eval:
           gen_coords.append(gen_coord)
           break
 
-    np.savez("results/successive_label", cl_c, cl_r, gen_coords)
+    np.savez("normal/results/successive_label", cl_c, cl_r, gen_coords)
 
   def save_coords(self, gen_coords, labels, path):
     data_size = gen_coords.shape[0]
@@ -80,7 +84,7 @@ class Eval:
     fig.savefig(path)
 
   def successive(self):
-    coords_npz = np.load("results/successive_label.npz")
+    coords_npz = np.load("normal/results/successive_label.npz")
     cl_c = coords_npz[coords_npz.files[0]]
     cl_r = coords_npz[coords_npz.files[1]]
     success_clc = []
@@ -105,7 +109,7 @@ class Eval:
     ax.set_xlabel("Specified label")
     ax.set_ylabel("Recalculated label")
     # plt.show()
-    fig.savefig("results/successive_label.png")
+    fig.savefig("normal/results/successive_label.png")
 
   def sample_data(self, data_num=100):
     z = Variable(FloatTensor(np.random.normal(0, 1, (data_num, 3))))
@@ -113,7 +117,7 @@ class Eval:
     labels = Variable(FloatTensor(labels))
     gen_coords = to_cpu(self.G(z, labels)).detach().numpy()
     labels = to_cpu(labels).detach().numpy()
-    np.savez("results/final", labels,self.rev_standardize(gen_coords))
+    np.savez("normal/results/final", labels,self.rev_standardize(gen_coords))
 
   def euclid_dist(self, coords):
     """バリエーションがどれぐらいあるか"""
@@ -148,20 +152,22 @@ class Eval:
     return max_dist, data_idx, generate_idx
 
 if __name__ == "__main__":
-  coords_npz = np.load("../dataset/standardized_coords.npz")
-  perfs = np.load("../dataset/perfs.npy")
-  G_PATH = "results/generator_params_50000"
+  coords_npz = np.load("dataset/standardized_coords.npz")
+  perfs = np.load("dataset/perfs.npy")
+  G_PATH = "normal/results/generator_params_50000"
   evl = Eval(G_PATH, coords_npz)
   cl_c = 0.684
   coords = evl.create_coords_by_cl(cl_c)
   coords = coords.reshape(coords.shape[0], -1)
-  clr = get_cls(coords)
-  max_dist, d_idx, g_idx = evl.calc_dist_from_dataset(coords, clr)
-  print(max_dist)
-  d_coord = evl.rev_standardize(evl.coords['data'][d_idx])
-  d_cl = perfs[d_idx]
-  g_coord = coords[g_idx]
-  g_cl = clr[g_idx]
-  print(cl_c, d_cl, g_cl)
-  cls = np.array([cl_c, d_cl, g_cl])
-  np.savez("dist_{0}".format(cl_c), d_coord, g_coord, cls, max_dist)
+  mu = evl.euclid_dist(coords)
+  print(mu)
+  # clr = get_cls(coords)
+  # max_dist, d_idx, g_idx = evl.calc_dist_from_dataset(coords, clr)
+  # print(max_dist)
+  # d_coord = evl.rev_standardize(evl.coords['data'][d_idx])
+  # d_cl = perfs[d_idx]
+  # g_coord = coords[g_idx]
+  # g_cl = clr[g_idx]
+  # print(cl_c, d_cl, g_cl)
+  # cls = np.array([cl_c, d_cl, g_cl])
+  # np.savez("dist_{0}".format(cl_c), d_coord, g_coord, cls, max_dist)
