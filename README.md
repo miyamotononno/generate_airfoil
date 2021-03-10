@@ -17,6 +17,7 @@ conditional GANを用いた翼型の形状生成を行いました。
 ```
 通常のconditional GANの訓練
 python3 -m normal.train
+
 通常のconditional GANの評価
 python3 -m normal.eval
 
