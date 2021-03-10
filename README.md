@@ -12,3 +12,19 @@ conditional GANを用いた翼型の形状生成を行いました。
 しかし、そのインストールは少々難しいので、[こちら](https://github.com/miyamotononno/generate_airfoil/issues/14)を参考にしてください。
 
 ## run
+
+代表的なコマンドを以下に記します。
+```
+通常のconditional GANの訓練
+python3 -m normal.train
+通常のconditional GANの評価
+python3 -m normal.eval
+
+conditional wgan-gpの訓練
+python3 -m wgan_gp.train
+
+conditional wgan-gpの評価
+python3 -m wgan_gp.eval
+```
+
+その他にも様々な関数があります。ご自身で、適宜変更してください。
