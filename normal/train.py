@@ -1,3 +1,7 @@
+if '__file__' in globals():
+  import os, sys
+  sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,7 +14,7 @@ import torch.nn.functional as F
 import torch
 import torch.autograd as autograd
 import statistics
-from models import Generator, Discriminator
+from normal.models import Generator, Discriminator
 from util import save_loss, to_cpu, save_coords, to_cuda
 
 
@@ -31,10 +35,10 @@ coord_shape = (opt.channels, opt.coord_size)
 
 cuda = True if torch.cuda.is_available() else False
 # Loss weight for gradient penalty
-done_epoch = 55000
+done_epoch = 0 # 変えること
 if done_epoch>0:
-    G_PATH = "results/generator_params_{0}".format(done_epoch)
-    D_PATH = "results/discriminator_params_{0}".format(done_epoch)
+    G_PATH = "normal/results/generator_params_{0}".format(done_epoch)
+    D_PATH = "normal/results/discriminator_params_{0}".format(done_epoch)
     generator = Generator(opt.latent_dim)
     generator.load_state_dict(torch.load(G_PATH, map_location=torch.device('cpu')))
     generator.eval()
@@ -51,8 +55,8 @@ if cuda:
     discriminator.cuda()
 
 # Configure data loader
-perfs_npz = np.load("../dataset/standardized_perfs.npz")
-coords_npz = np.load("../dataset/standardized_coords.npz")
+perfs_npz = np.load("dataset/standardized_perfs.npz")
+coords_npz = np.load("dataset/standardized_coords.npz")
 coords = coords_npz[coords_npz.files[0]]
 coord_mean = coords_npz[coords_npz.files[1]]
 coord_std = coords_npz[coords_npz.files[2]]
@@ -140,11 +144,11 @@ for epoch in range(opt.n_epochs):
     D_losses.append(d_loss.item())
     G_losses.append(g_loss.item())
     if epoch % 5000 == 0:
-            torch.save(generator.state_dict(), "results/generator_params_{0}".format(epoch))
-            torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(epoch))
+            torch.save(generator.state_dict(), "normal/results/generator_params_{0}".format(epoch))
+            torch.save(discriminator.state_dict(), "normal/results/discriminator_params_{0}".format(epoch))
 
-torch.save(generator.state_dict(), "results/generator_params_{0}".format(opt.n_epochs+done_epoch))
-torch.save(discriminator.state_dict(), "results/discriminator_params_{0}".format(opt.n_epochs+done_epoch)) 
+torch.save(generator.state_dict(), "normal/results/generator_params_{0}".format(opt.n_epochs+done_epoch))
+torch.save(discriminator.state_dict(), "normal/results/discriminator_params_{0}".format(opt.n_epochs+done_epoch)) 
 end = time.time()
 print((end-start)/60)
-np.savez("results/loss.npz", np.array(D_losses), np.array(G_losses))
+np.savez("normal/results/loss.npz", np.array(D_losses), np.array(G_losses))

@@ -29,9 +29,9 @@ def get_cls(coords):
 
 if __name__ == "__main__":    
   use_dataset = False
+  input_path = "./result/final.npz" # change me!!
 
   if not use_dataset:
-    input_path = "./result/final.npz"
     npz = np.load(input_path)
     labels = npz[npz.files[0]]
     coords = npz[npz.files[1]]
