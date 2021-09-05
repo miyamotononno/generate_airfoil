@@ -7,7 +7,7 @@ conditional GANを用いた翼型の形状生成を行いました。
 さらに詳しい内容を知りたい方は、 nozomiya.422@gmail.com までお問い合わせください。
 
 追記(2021/09/05)：
-Google Scholor上で論文を閲覧できるようになりました。　　
+Google Scholor上で論文を閲覧できるようになりました。  
 題名: Inverse Airfoil Design Method for Generating　Varieties of Smooth Airfoils Using Conditional　WGAN-GP  
 リンク: https://assets.researchsquare.com/files/rs-618399/v1_covered.pdf?c=1624375613
 
